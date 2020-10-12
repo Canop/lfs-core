@@ -11,6 +11,5 @@ repository = "https://github.com/Canop/lfs-core"
 readme = "README.md"
 
 [dependencies]
-file-size = "1.0.3"
 libc = "0.2"
 thiserror = "1.0"
