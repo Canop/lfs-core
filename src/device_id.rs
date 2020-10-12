@@ -1,14 +1,6 @@
+use {crate::error::*, std::str::FromStr};
 
-use {
-    crate::{
-        error::*,
-    },
-    std::{
-        str::FromStr,
-    },
-};
-
-/// Id of a device, as can be found in MetadataExt.dev
+/// Id of a device, as can be found in MetadataExt.dev().
 ///
 /// Note: I have absolutely no idea of the size of those
 /// parts and whether the u32 are the right containers

@@ -1,10 +1,5 @@
-
 use {
-    crate::{
-        device_id::DeviceId,
-        error::*,
-        sys,
-    },
+    crate::{device_id::DeviceId, error::*, sys},
     std::{
         ffi::CString,
         mem,
@@ -14,7 +9,7 @@ use {
     },
 };
 
-/// I have no idea of the size of this id
+/// An id of a mount
 pub type MountId = u32;
 
 /// inode & blocs information given by statvfs
@@ -36,7 +31,6 @@ pub struct Mount {
     pub mount_point: PathBuf,
     pub fs: String,
     pub fs_type: String,
-
     /// true for HDD, false for SSD, None for unknown or not a disk
     pub rotational: Option<bool>,
     pub stats: Option<Stats>,
@@ -67,8 +61,12 @@ impl Mount {
         // Q: Am I sure this is correct ?
         // A: Absolutely not!
         self.partition_name()
-            .map(|pn| pn.chars().take_while(char::is_ascii_alphabetic).collect::<String>())
-            .filter(|s| s.len()>2)
+            .map(|pn| {
+                pn.chars()
+                    .take_while(char::is_ascii_alphabetic)
+                    .collect::<String>()
+            })
+            .filter(|s| s.len() > 2)
     }
     pub fn disk_type(&self) -> &'static str {
         match self.rotational {
@@ -79,12 +77,14 @@ impl Mount {
     }
 }
 
-fn next<'a,'b>(split: &'b mut SplitWhitespace<'a>) -> Result<&'a str> {
+fn next<'a, 'b>(split: &'b mut SplitWhitespace<'a>) -> Result<&'a str> {
     split.next().ok_or(Error::UnexpectedFormat)
 }
-fn skip_until<'a,'b>(split: &'b mut SplitWhitespace<'a>, sep: &'static str) -> Result<()> {
+fn skip_until<'a, 'b>(split: &'b mut SplitWhitespace<'a>, sep: &'static str) -> Result<()> {
     Ok(loop {
-        if next(split)? == sep { break; }
+        if next(split)? == sep {
+            break;
+        }
     })
 }
 
@@ -125,7 +125,10 @@ impl FromStr for Mount {
                 }
                 _ => {
                     // unexpected
-                    return Err(Error::NonZeroStavfsReturn{ code, path: mount_point });
+                    return Err(Error::UnexpectedStavfsReturn {
+                        code,
+                        path: mount_point,
+                    });
                 }
             }
         };
@@ -141,18 +144,21 @@ impl FromStr for Mount {
             stats,
         };
         // try to determine whether it's SSD or HDD
-        mount.rotational = mount.disk_name()
+        mount.rotational = mount
+            .disk_name()
             .and_then(|name| sys::read_file(&format!("/sys/block/{}/queue/rotational", name)).ok())
             .and_then(|c| {
                 match c.trim().as_ref() {
-                "0" => Some(false),
-                "1" => Some(true),
-                _ => None, // should not happen today
-            }});
+                    "0" => Some(false),
+                    "1" => Some(true),
+                    _ => None, // should not happen today
+                }
+            });
         Ok(mount)
     }
 }
 
+/// read all the mount points and load basic information on them
 pub fn read_all() -> Result<Vec<Mount>> {
     sys::read_file("/proc/self/mountinfo")?
         .trim()
