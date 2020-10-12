@@ -1,0 +1,16 @@
+[package]
+name = "lfs-core"
+version = "0.1.0"
+authors = ["dystroy <denys.seguret@gmail.com>"]
+edition = "2018"
+keywords = ["unix", "filesystem", "fs"]
+license = "MIT"
+categories = ["filesystem"]
+description = "give information on mounted disks"
+repository = "https://github.com/Canop/lfs-core"
+readme = "README.md"
+
+[dependencies]
+file-size = "1.0.3"
+libc = "0.2"
+thiserror = "1.0"
