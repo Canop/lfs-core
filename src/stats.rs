@@ -4,7 +4,7 @@ use {
 };
 
 /// inode & blocs information given by statvfs
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Stats {
     pub bsize: u64,
     pub blocks: u64,

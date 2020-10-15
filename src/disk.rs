@@ -3,31 +3,33 @@ use {super::*, std::fs};
 /// a "block device"
 #[derive(Debug, Clone)]
 pub struct Disk {
-    /// a name, like "sda", "sdb", "nvme0n1", etc.
+    /// a name, like "sda", "sdc", "nvme0n1", etc.
     pub name: String,
 
-    /// true for HDD, false for SSD, None for unknown
+    /// true for HDD, false for SSD, None for unknown.
+    /// This information isn't reliable for USB devices
     pub rotational: Option<bool>,
+
+    /// whether the system thinks the media is removable.
+    /// Seems reliable.
+    pub removable: Option<bool>,
 }
 
 impl Disk {
     pub fn new(name: String) -> Self {
-        let rotational = sys::read_file(&format!("/sys/block/{}/queue/rotational", name))
-            .ok()
-            .and_then(|c| {
-                match c.trim().as_ref() {
-                    "0" => Some(false),
-                    "1" => Some(true),
-                    _ => None, // should not happen today
-                }
-            });
-        Self { name, rotational }
+        let rotational = sys::read_file_as_bool(&format!("/sys/block/{}/queue/rotational", name));
+        let removable = sys::read_file_as_bool(&format!("/sys/block/{}/removable", name));
+        Self { name, rotational, removable }
     }
+    /// a synthetic code trying to express the essence of the type of media,
+    /// an empty str being returned when information couldn't be gathered.
+    /// This code is for humans and may change in future minor versions.
     pub fn disk_type(&self) -> &'static str {
-        match self.rotational {
-            Some(true) => "HDD",
-            Some(false) => "SSD",
-            None => "",
+        match (self.removable, self.rotational) {
+            (Some(true), _) => "rem",
+            (Some(false), Some(true)) => "HDD",
+            (Some(false), Some(false)) => "SSD",
+            _ => "",
         }
     }
 }

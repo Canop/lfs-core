@@ -1,7 +1,7 @@
 use super::*;
 
 /// A mount point
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Mount {
     pub info: MountInfo,
     pub disk: Option<Disk>,
@@ -28,7 +28,7 @@ pub fn read_mounts() -> Result<Vec<Mount>> {
                 disks
                     .iter()
                     .find(|d| partition_name.starts_with(&d.name))
-                    .map(|d| d.clone())
+                    .cloned()
             });
             let stats = Stats::from(&info.mount_point)?;
             Ok(Mount { info, disk, stats })

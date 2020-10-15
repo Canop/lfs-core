@@ -1,9 +1,6 @@
 use {crate::error::*, std::str::FromStr};
 
 /// Id of a device, as can be found in MetadataExt.dev().
-///
-/// Note: I have absolutely no idea of the size of those
-/// parts and whether the u32 are the right containers
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DeviceId {
     pub major: u32,
@@ -14,7 +11,7 @@ impl FromStr for DeviceId {
     type Err = Error;
     /// this code is based on `man 5 proc` and my stochastic interpretation
     fn from_str(s: &str) -> Result<Self> {
-        let parts: Vec<&str> = s.split(":").collect();
+        let parts: Vec<&str> = s.split(':').collect();
         match parts.len() {
             1 => Ok(parts[0].parse::<u64>()?.into()),
             2 => Ok(Self {
@@ -35,7 +32,6 @@ impl From<u64> for DeviceId {
     }
 }
 
-#[allow(dead_code)] // it's used in tests
 impl DeviceId {
     pub fn new(major: u32, minor: u32) -> Self {
         Self { major, minor }

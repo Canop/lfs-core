@@ -10,7 +10,7 @@ use {
 pub type MountId = u32;
 
 /// A mount point as described in /proc/self/mountinfo
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MountInfo {
     pub id: MountId,
     pub parent: MountId,
