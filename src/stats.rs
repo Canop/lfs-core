@@ -23,10 +23,10 @@ impl Stats {
                     // good
                     let statvfs = statvfs.assume_init();
                     Ok(Some(Stats {
-                        bsize: statvfs.f_bsize,
-                        blocks: statvfs.f_blocks,
-                        bavail: statvfs.f_bavail,
-                        bfree: statvfs.f_bfree,
+                        bsize: statvfs.f_bsize as u64,
+                        blocks: statvfs.f_blocks as u64,
+                        bavail: statvfs.f_bavail as u64,
+                        bfree: statvfs.f_bfree as u64,
                     }))
                 }
                 -1 => {

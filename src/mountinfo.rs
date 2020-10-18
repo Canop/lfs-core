@@ -58,7 +58,7 @@ fn skip_until<'a, 'b>(split: &'b mut SplitWhitespace<'a>, sep: &'static str) -> 
     })
 }
 
-/// read all the mount points and load basic information on them
+/// read all the mount points
 pub fn read_mountinfo() -> Result<Vec<MountInfo>> {
     sys::read_file("/proc/self/mountinfo")?
         .trim()

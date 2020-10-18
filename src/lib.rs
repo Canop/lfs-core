@@ -1,6 +1,6 @@
 /*!
 
-Use `read_all` to get information on all mounted volumes on a unix system.
+Use `lfs_core::read_mounts` to get information on all mounted volumes on a unix system.
 
 ```
 // get all mount points
