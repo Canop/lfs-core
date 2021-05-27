@@ -13,7 +13,7 @@ for mount in mounts {
 }
 ```
 
-The [lfs](https://github.com/Canop/lfs) is a viewer for lfs-core and shows you the information you're expected to find in mounts.
+The [lfs](https://github.com/Canop/lfs) application is a viewer for lfs-core and shows you the information you're expected to find in mounts.
 
 */
 
