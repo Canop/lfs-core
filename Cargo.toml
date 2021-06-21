@@ -1,9 +1,9 @@
 [package]
 name = "lfs-core"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["dystroy <denys.seguret@gmail.com>"]
 edition = "2018"
-keywords = ["unix", "filesystem", "fs"]
+keywords = ["linux", "filesystem", "fs"]
 license = "MIT"
 categories = ["filesystem"]
 description = "give information on mounted disks"
@@ -13,3 +13,4 @@ readme = "README.md"
 [dependencies]
 libc = "0.2"
 thiserror = "1.0"
+lazy-regex = "2.2"

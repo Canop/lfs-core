@@ -1,5 +1,6 @@
 use {
     crate::*,
+    lazy_regex::*,
     std::{
         path::PathBuf,
         str::{FromStr, SplitWhitespace},
@@ -30,8 +31,8 @@ impl FromStr for MountInfo {
         let id = next(tokens)?.parse()?;
         let parent = next(tokens)?.parse()?;
         let dev = next(tokens)?.parse()?;
-        let root = next(tokens)?.into();
-        let mount_point = PathBuf::from(next(tokens)?);
+        let root = str_to_pathbuf(next(tokens)?);
+        let mount_point = str_to_pathbuf(next(tokens)?);
         skip_until(tokens, "-")?;
         let fs_type = next(tokens)?.to_string();
         let fs = next(tokens)?.to_string();
@@ -45,6 +46,18 @@ impl FromStr for MountInfo {
             fs_type,
         })
     }
+}
+
+/// convert a string to a pathbuf, converting ascii-octal encoded
+/// chars.
+/// This is necessary because some chars are encoded. For example
+/// the `/media/dys/USB DISK` is present as `/media/dys/USB\040DISK`
+fn str_to_pathbuf(s: &str) -> PathBuf {
+    let s = regex_replace_all!(r#"\\0(\d\d)"#, s, |_, n: &str| {
+        let c = u8::from_str_radix(n, 8).unwrap() as char;
+        c.to_string()
+    });
+    PathBuf::from(s.to_string())
 }
 
 fn next<'a, 'b>(split: &'b mut SplitWhitespace<'a>) -> Result<&'a str> {
