@@ -1,4 +1,8 @@
-use {super::*, std::fs};
+use {
+    super::*,
+    lazy_regex::*,
+    std::fs,
+};
 
 /// a "block device"
 #[derive(Debug, Clone)]
@@ -13,22 +17,27 @@ pub struct Disk {
     /// whether the system thinks the media is removable.
     /// Seems reliable.
     pub removable: Option<bool>,
+
+    /// whether it's a RAM disk
+    pub ram: bool,
 }
 
 impl Disk {
     pub fn new(name: String) -> Self {
         let rotational = sys::read_file_as_bool(&format!("/sys/block/{}/queue/rotational", name));
         let removable = sys::read_file_as_bool(&format!("/sys/block/{}/removable", name));
-        Self { name, rotational, removable }
+        let ram = regex_is_match!(r#"^zram\d*$"#, &name);
+        Self { name, rotational, removable , ram }
     }
     /// a synthetic code trying to express the essence of the type of media,
     /// an empty str being returned when information couldn't be gathered.
     /// This code is for humans and may change in future minor versions.
     pub fn disk_type(&self) -> &'static str {
-        match (self.removable, self.rotational) {
-            (Some(true), _) => "rem",
-            (Some(false), Some(true)) => "HDD",
-            (Some(false), Some(false)) => "SSD",
+        match (self.removable, self.rotational, self.ram) {
+            (_, _, true) => "RAM",
+            (Some(true), _, _) => "rem",
+            (Some(false), Some(true), _) => "HDD",
+            (Some(false), Some(false), _) => "SSD",
             _ => "",
         }
     }
