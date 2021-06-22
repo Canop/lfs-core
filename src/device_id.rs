@@ -1,4 +1,7 @@
-use {crate::error::*, std::str::FromStr};
+use {
+    crate::error::*,
+    std::str::FromStr,
+};
 
 /// Id of a device, as can be found in MetadataExt.dev().
 #[derive(Clone, Copy, Debug, PartialEq)]

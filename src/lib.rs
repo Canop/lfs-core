@@ -17,6 +17,7 @@ The [lfs](https://github.com/Canop/lfs) application is a viewer for lfs-core and
 
 */
 
+mod block_device;
 mod device_id;
 mod disk;
 mod error;
@@ -26,8 +27,9 @@ mod stats;
 mod sys;
 
 pub use {
+    block_device::{BlockDevice, BlockDeviceList},
     device_id::DeviceId,
-    disk::{read_disks, Disk},
+    disk::Disk,
     error::{Error, Result},
     mount::{read_mounts, Mount},
     mountinfo::{read_mountinfo, MountId, MountInfo},

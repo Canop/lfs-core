@@ -19,17 +19,12 @@ pub fn read_mounts() -> Result<Vec<Mount>> {
     // we'll find the disk for a filesystem by taking the longest
     // disk whose name starts the one of our partition
     // hence the sorting.
-    let mut disks = read_disks()?;
-    disks.sort_by_key(|disk| std::cmp::Reverse(disk.name.len()));
+    let bd_list = BlockDeviceList::read()?;
     read_mountinfo()?
         .drain(..)
         .map(|info| {
-            let disk = info.fs.strip_prefix("/dev/").and_then(|partition_name| {
-                disks
-                    .iter()
-                    .find(|d| partition_name.starts_with(&d.name))
-                    .cloned()
-            });
+            let top_bd = bd_list.find_top(info.dev);
+            let disk = top_bd.map(|bd| Disk::new(bd.name.clone()));
             let stats = Stats::from(&info.mount_point)?;
             Ok(Mount { info, disk, stats })
         })
