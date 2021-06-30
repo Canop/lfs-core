@@ -23,7 +23,7 @@ pub fn read_mounts() -> Result<Vec<Mount>> {
     read_mountinfo()?
         .drain(..)
         .map(|info| {
-            let top_bd = bd_list.find_top(info.dev);
+            let top_bd = bd_list.find_top(info.dev, info.fs_name());
             let disk = top_bd.map(|bd| Disk::new(bd.name.clone()));
             let stats = Stats::from(&info.mount_point)?;
             Ok(Mount { info, disk, stats })

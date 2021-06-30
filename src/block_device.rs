@@ -29,16 +29,26 @@ impl BlockDeviceList {
         append_child_block_devices(None, &root, &mut list)?;
         Ok(Self { list })
     }
-    pub fn find(&self, id: DeviceId) -> Option<&BlockDevice> {
+    pub fn find_by_id(&self, id: DeviceId) -> Option<&BlockDevice> {
         self.list
             .iter()
             .find(|bd| bd.id == id)
     }
-    pub fn find_top(&self, id: DeviceId) -> Option<&BlockDevice> {
-        self.find(id)
+    pub fn find_by_name(&self, name: &str) -> Option<&BlockDevice> {
+        self.list
+            .iter()
+            .find(|bd| bd.name == name)
+    }
+    pub fn find_top(
+        &self,
+        id: DeviceId,
+        name: Option<&str>,
+    ) -> Option<&BlockDevice> {
+        self.find_by_id(id)
+            .or_else(|| name.and_then(|name| self.find_by_name(name)))
             .and_then(|bd| {
                 match bd.parent {
-                    Some(parent_id) => self.find_top(parent_id),
+                    Some(parent_id) => self.find_top(parent_id, None),
                     None => Some(bd),
                 }
             })

@@ -48,6 +48,13 @@ impl FromStr for MountInfo {
     }
 }
 
+impl MountInfo {
+    /// return the last token of the fs path
+    pub fn fs_name(&self) -> Option<&str> {
+        regex_find!(r#"[^\\/]+$"#, &self.fs)
+    }
+}
+
 /// convert a string to a pathbuf, converting ascii-octal encoded
 /// chars.
 /// This is necessary because some chars are encoded. For example
