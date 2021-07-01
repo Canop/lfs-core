@@ -26,7 +26,7 @@ impl BlockDeviceList {
     pub fn read() -> Result<Self> {
         let mut list = Vec::new();
         let root = PathBuf::from("/sys/block");
-        append_child_block_devices(None, &root, &mut list)?;
+        append_child_block_devices(None, &root, &mut list, 0)?;
         Ok(Self { list })
     }
     pub fn find_by_id(&self, id: DeviceId) -> Option<&BlockDevice> {
@@ -60,17 +60,26 @@ fn append_child_block_devices(
     parent: Option<DeviceId>,
     parent_path: &Path,
     list: &mut Vec<BlockDevice>,
+    depth: usize,
 ) -> Result<()> {
     for e in fs::read_dir(parent_path)?.flatten() {
         let device_id = fs::read_to_string(e.path().join("dev")).ok()
             .and_then(|s| DeviceId::from_str(s.trim()).ok());
         if let Some(id) = device_id {
+            if list.iter().find(|bd| bd.id == id).is_some() {
+                // already present, probably because of a cycling link
+                continue;
+            }
             list.push(BlockDevice {
                 name: e.file_name().to_string_lossy().to_string(),
                 id,
                 parent,
             });
-            append_child_block_devices(Some(id), &e.path(), list)?;
+            if depth > 15 {
+                // there's probably a link cycle
+                continue;
+            }
+            append_child_block_devices(Some(id), &e.path(), list, depth + 1)?;
         }
     }
     Ok(())
