@@ -14,11 +14,14 @@ pub struct Disk {
     pub rotational: Option<bool>,
 
     /// whether the system thinks the media is removable.
-    /// Seems reliable.
+    /// Seems reliable when not mapped
     pub removable: Option<bool>,
 
     /// whether it's a RAM disk
     pub ram: bool,
+
+    /// whether it's on LVM
+    pub lvm: bool,
 
     /// whether it's a crypted disk
     pub crypted: bool,
@@ -30,8 +33,9 @@ impl Disk {
         let removable = sys::read_file_as_bool(&format!("/sys/block/{}/removable", name));
         let ram = regex_is_match!(r#"^zram\d*$"#, &name);
         let dm_uuid = sys::read_file(&format!("/sys/block/{}/dm/uuid", name)).ok();
-        let crypted = dm_uuid.map_or(false, |uuid| uuid.starts_with("CRYPT-"));
-        Self { name, rotational, removable , ram, crypted }
+        let crypted = dm_uuid.as_ref().map_or(false, |uuid| uuid.starts_with("CRYPT-"));
+        let lvm = dm_uuid.map_or(false, |uuid| uuid.starts_with("LVM-"));
+        Self { name, rotational, removable , ram, lvm, crypted }
     }
     /// a synthetic code trying to express the essence of the type of media,
     /// an empty str being returned when information couldn't be gathered.
@@ -41,6 +45,8 @@ impl Disk {
             "RAM"
         } else if self.crypted {
             "crypt"
+        } else if self.lvm {
+            "LVM"
         } else {
             match (self.removable, self.rotational) {
                 (Some(true), _) => "remov",

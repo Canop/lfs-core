@@ -49,6 +49,11 @@ impl FromStr for MountInfo {
 }
 
 impl MountInfo {
+    /// return `<name>` when the path is `/dev/mapper/<name>`
+    pub fn dm_name(&self) -> Option<&str> {
+        regex_captures!(r#"^/dev/mapper/([^/]+)$"#, &self.fs)
+            .map(|(_, dm_name)| dm_name)
+    }
     /// return the last token of the fs path
     pub fn fs_name(&self) -> Option<&str> {
         regex_find!(r#"[^\\/]+$"#, &self.fs)
@@ -89,6 +94,5 @@ pub fn read_mountinfo() -> Result<Vec<MountInfo>> {
                 eprintln!("Error while parsing a mount line: {}", e);
             }
         })
-        //.filter(Result::is_ok)
         .collect()
 }
