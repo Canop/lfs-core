@@ -75,12 +75,13 @@ fn str_to_pathbuf(s: &str) -> PathBuf {
 fn next<'a, 'b>(split: &'b mut SplitWhitespace<'a>) -> Result<&'a str> {
     split.next().ok_or(Error::UnexpectedFormat)
 }
-fn skip_until<'a, 'b>(split: &'b mut SplitWhitespace<'a>, sep: &'static str) -> Result<()> {
-    Ok(loop {
+fn skip_until(split: &mut SplitWhitespace, sep: &'static str) -> Result<()> {
+    loop {
         if next(split)? == sep {
             break;
         }
-    })
+    }
+    Ok(())
 }
 
 /// read all the mount points
