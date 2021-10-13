@@ -33,9 +33,18 @@ impl Disk {
         let removable = sys::read_file_as_bool(&format!("/sys/block/{}/removable", name));
         let ram = regex_is_match!(r#"^zram\d*$"#, &name);
         let dm_uuid = sys::read_file(&format!("/sys/block/{}/dm/uuid", name)).ok();
-        let crypted = dm_uuid.as_ref().map_or(false, |uuid| uuid.starts_with("CRYPT-"));
+        let crypted = dm_uuid
+            .as_ref()
+            .map_or(false, |uuid| uuid.starts_with("CRYPT-"));
         let lvm = dm_uuid.map_or(false, |uuid| uuid.starts_with("LVM-"));
-        Self { name, rotational, removable , ram, lvm, crypted }
+        Self {
+            name,
+            rotational,
+            removable,
+            ram,
+            lvm,
+            crypted,
+        }
     }
     /// a synthetic code trying to express the essence of the type of media,
     /// an empty str being returned when information couldn't be gathered.
@@ -57,4 +66,3 @@ impl Disk {
         }
     }
 }
-
