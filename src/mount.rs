@@ -4,6 +4,7 @@ use super::*;
 #[derive(Debug, Clone)]
 pub struct Mount {
     pub info: MountInfo,
+    pub fs_label: Option<String>,
     pub disk: Option<Disk>,
     pub stats: Option<Stats>,
 }
@@ -16,6 +17,7 @@ impl Mount {
 
 /// read all the mount points and load basic information on them
 pub fn read_mounts() -> Result<Vec<Mount>> {
+    let labels = read_labels().ok();
     // we'll find the disk for a filesystem by taking the longest
     // disk whose name starts the one of our partition
     // hence the sorting.
@@ -28,9 +30,16 @@ pub fn read_mounts() -> Result<Vec<Mount>> {
                 info.dm_name(),
                 info.fs_name(),
             );
+            let fs_label = labels.as_ref()
+                .and_then(|labels| {
+                    labels
+                        .iter()
+                        .find(|label| label.fs_name == info.fs)
+                        .map(|label| label.label.clone())
+                });
             let disk = top_bd.map(|bd| Disk::new(bd.name.clone()));
             let stats = Stats::from(&info.mount_point)?;
-            Ok(Mount { info, disk, stats })
+            Ok(Mount { info, fs_label, disk, stats })
         })
         .collect()
 }
