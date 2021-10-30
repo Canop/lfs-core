@@ -27,7 +27,7 @@ pub fn read_labels() -> Result<Vec<Labelling>> {
             if !file_type.is_symlink() {
                 return None;
             }
-            let label = entry.file_name().to_string_lossy().to_string();
+            let label = sys::decode_string(entry.file_name().to_string_lossy());
             let linked_path = fs::read_link(entry.path())
                 .map(|path| path.to_string_lossy().to_string())
                 .ok()?;

@@ -1,7 +1,10 @@
-use std::{
-    fs::File,
-    io::{self, Read},
-    path::Path,
+use {
+    lazy_regex::*,
+    std::{
+        fs::File,
+        io::{self, Read},
+        path::Path,
+    },
 };
 
 /// read a system file into a string
@@ -19,4 +22,19 @@ pub fn read_file_as_bool<P: AsRef<Path>>(path: P) -> Option<bool> {
         "1" => Some(true),
         _ => None,
     })
+}
+
+/// decode ascii-octal or ascii-hexa encoded strings
+pub fn decode_string<S: AsRef<str>>(s: S) -> String {
+    // replacing octal escape sequences
+    let s = regex_replace_all!(r#"\\0(\d\d)"#, s.as_ref(), |_, n: &str| {
+        let c = u8::from_str_radix(n, 8).unwrap() as char;
+        c.to_string()
+    });
+    // replacing hexa escape sequences
+    let s = regex_replace_all!(r#"\\x([0-9a-fA-F]{2})"#, &s, |_, n: &str| {
+        let c = u8::from_str_radix(n, 16).unwrap() as char;
+        c.to_string()
+    });
+    s.to_string()
 }

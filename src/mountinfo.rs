@@ -65,11 +65,7 @@ impl MountInfo {
 /// This is necessary because some chars are encoded. For example
 /// the `/media/dys/USB DISK` is present as `/media/dys/USB\040DISK`
 fn str_to_pathbuf(s: &str) -> PathBuf {
-    let s = regex_replace_all!(r#"\\0(\d\d)"#, s, |_, n: &str| {
-        let c = u8::from_str_radix(n, 8).unwrap() as char;
-        c.to_string()
-    });
-    PathBuf::from(s.to_string())
+    PathBuf::from(sys::decode_string(s))
 }
 
 fn next<'a, 'b>(split: &'b mut SplitWhitespace<'a>) -> Result<&'a str> {
