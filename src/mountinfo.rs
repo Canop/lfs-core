@@ -20,6 +20,8 @@ pub struct MountInfo {
     pub mount_point: PathBuf,
     pub fs: String,
     pub fs_type: String,
+    /// whether it's a bound mount (usually mirroring part of another device)
+    pub bound: bool,
 }
 
 impl FromStr for MountInfo {
@@ -44,6 +46,7 @@ impl FromStr for MountInfo {
             mount_point,
             fs,
             fs_type,
+            bound: false, // determined by post-treatment
         })
     }
 }
@@ -82,14 +85,11 @@ fn skip_until(split: &mut SplitWhitespace, sep: &'static str) -> Result<()> {
 
 /// read all the mount points
 pub fn read_mountinfo() -> Result<Vec<MountInfo>> {
-    sys::read_file("/proc/self/mountinfo")?
-        .trim()
-        .split('\n')
-        .map(str::parse)
-        .inspect(|r| {
-            if let Err(e) = r {
-                eprintln!("Error while parsing a mount line: {}", e);
-            }
-        })
-        .collect()
+    let mut mounts: Vec<MountInfo> = Vec::new();
+    for line in sys::read_file("/proc/self/mountinfo")?.trim().split('\n') {
+        let mut mount: MountInfo = line.parse()?;
+        mount.bound = mounts.iter().any(|m| m.dev == mount.dev);
+        mounts.push(mount);
+    }
+    Ok(mounts)
 }
