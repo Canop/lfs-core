@@ -1,6 +1,6 @@
 [package]
 name = "lfs-core"
-version = "0.8.0-dev"
+version = "0.8.0"
 authors = ["dystroy <denys.seguret@gmail.com>"]
 edition = "2021"
 keywords = ["linux", "filesystem", "fs"]
