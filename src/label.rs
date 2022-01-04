@@ -1,10 +1,7 @@
 use {
     super::*,
     snafu::prelude::*,
-    std::{
-        fs,
-        path::PathBuf,
-    },
+    std::fs,
 };
 
 /// the labelling of a file-system, that
@@ -21,8 +18,7 @@ pub struct Labelling {
 /// this information the way lfs-core reads it.
 pub fn read_labels() -> Result<Vec<Labelling>, Error> {
     let path = "/dev/disk/by-label";
-    let entries = fs::read_dir(path)
-        .with_context(|_| CantReadDirSnafu { path: PathBuf::from(path) })?;
+    let entries = fs::read_dir(path).context(CantReadDirSnafu { path })?;
     let labels = entries
         .filter_map(|entry| entry.ok())
         .filter_map(|entry| {

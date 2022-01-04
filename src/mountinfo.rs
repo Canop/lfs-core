@@ -37,7 +37,6 @@ impl FromStr for MountInfo {
         (|| {
             // this parsing is based on `man 5 proc`
             let mut tokens = line.split_whitespace();
-            let tokens = &mut tokens;
             let id = tokens.next()?.parse().ok()?;
             let parent = tokens.next()?.parse().ok()?;
             let dev = tokens.next()?.parse().ok()?;
@@ -90,7 +89,7 @@ pub fn read_mountinfo() -> Result<Vec<MountInfo>, Error> {
     let mut mounts: Vec<MountInfo> = Vec::new();
     let path = "/proc/self/mountinfo";
     let file_content = sys::read_file(path)
-        .with_context(|_| CantReadDirSnafu { path: PathBuf::from(path) })?;
+        .context(CantReadDirSnafu { path })?;
     for line in file_content.trim().split('\n') {
         let mut mount: MountInfo = line.parse()
             .map_err(|source| Error::ParseMountInfo { source })?;
