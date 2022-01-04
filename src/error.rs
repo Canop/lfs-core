@@ -1,14 +1,26 @@
 /// lfs error type
-#[derive(thiserror::Error, Debug)]
+#[derive(Debug, snafu::Snafu)]
+#[snafu(visibility(pub(crate)))]
 pub enum Error {
-    #[error("IO error: {0}")]
-    IO(#[from] std::io::Error),
-    #[error("Unexpected format")]
+
+    #[snafu(display("Could not read file {path:?}"))]
+    CantReadFile {
+        source: std::io::Error,
+        path: std::path::PathBuf,
+    },
+
+    #[snafu(display("Could not read dir {path:?}"))]
+    CantReadDir {
+        source: std::io::Error,
+        path: std::path::PathBuf,
+    },
+
+    #[snafu(display("Could not parse mountinfo"))]
+    ParseMountInfo {
+        source: crate::ParseMountInfoError,
+    },
+
+    #[snafu(display("Unexpected format"))]
     UnexpectedFormat,
-    #[error("Parse int error: {0}")]
-    NotAnInt(#[from] std::num::ParseIntError),
-    #[error("libc.statvfs({path:?}) returned {code}")]
-    UnexpectedStavfsReturn { code: i32, path: std::path::PathBuf },
 }
 
-pub type Result<T> = std::result::Result<T, Error>;

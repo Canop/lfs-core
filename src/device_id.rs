@@ -1,5 +1,5 @@
 use {
-    crate::error::*,
+    snafu::prelude::*,
     std::str::FromStr,
 };
 
@@ -10,19 +10,31 @@ pub struct DeviceId {
     pub minor: u32,
 }
 
+#[derive(Debug, Snafu)]
+#[snafu(display("Could not parse {string} as a device id"))]
+pub struct ParseDeviceIdError {
+    string: String,
+}
+
 impl FromStr for DeviceId {
-    type Err = Error;
+    type Err = ParseDeviceIdError;
     /// this code is based on `man 5 proc` and my stochastic interpretation
-    fn from_str(s: &str) -> Result<Self> {
-        let parts: Vec<&str> = s.split(':').collect();
-        match parts.len() {
-            1 => Ok(parts[0].parse::<u64>()?.into()),
-            2 => Ok(Self {
-                major: parts[0].parse()?,
-                minor: parts[1].parse()?,
-            }),
-            _ => Err(Error::UnexpectedFormat),
-        }
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        (|| {
+            let mut parts = string.split(':').fuse();
+            match (parts.next(), parts.next(), parts.next()) {
+                (Some(major), Some(minor), None) => {
+                    let major = major.parse().ok()?;
+                    let minor = minor.parse().ok()?;
+                    Some(Self { major, minor })
+                }
+                (Some(int), None, None) => {
+                    let int: u64 = int.parse().ok()?;
+                    Some( int.into() )
+                }
+                _ => None,
+            }
+        })().with_context(|| ParseDeviceIdSnafu { string })
     }
 }
 

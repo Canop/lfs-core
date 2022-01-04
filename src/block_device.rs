@@ -1,5 +1,6 @@
 use {
-    super::*,
+    snafu::prelude::*,
+    crate::*,
     std::{
         fs,
         path::{Path, PathBuf},
@@ -28,7 +29,7 @@ pub struct BlockDevice {
 }
 
 impl BlockDeviceList {
-    pub fn read() -> Result<Self> {
+    pub fn read() -> Result<Self, Error> {
         let mut list = Vec::new();
         let root = PathBuf::from("/sys/block");
         append_child_block_devices(None, &root, &mut list, 0)?;
@@ -66,8 +67,10 @@ fn append_child_block_devices(
     parent_path: &Path,
     list: &mut Vec<BlockDevice>,
     depth: usize,
-) -> Result<()> {
-    for e in fs::read_dir(parent_path)?.flatten() {
+) -> Result<(), Error> {
+    let children = fs::read_dir(parent_path)
+        .with_context(|_| CantReadDirSnafu { path: parent_path.to_path_buf() })?;
+    for e in children.flatten() {
         let device_id = fs::read_to_string(e.path().join("dev"))
             .ok()
             .and_then(|s| DeviceId::from_str(s.trim()).ok());

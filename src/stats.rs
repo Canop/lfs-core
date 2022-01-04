@@ -1,6 +1,10 @@
 use {
-    super::*,
-    std::{ffi::CString, mem, os::unix::ffi::OsStrExt, path::Path},
+    std::{
+        ffi::CString,
+        mem,
+        os::unix::ffi::OsStrExt,
+        path::Path,
+    },
 };
 
 /// inode & blocs information given by statvfs
@@ -23,7 +27,7 @@ pub struct Stats {
 }
 
 impl Stats {
-    pub fn from(mount_point: &Path) -> Result<Option<Self>> {
+    pub fn from(mount_point: &Path) -> Option<Self> {
         let c_mount_point = CString::new(mount_point.as_os_str().as_bytes()).unwrap();
         unsafe {
             let mut statvfs = mem::MaybeUninit::<libc::statvfs>::uninit();
@@ -32,7 +36,7 @@ impl Stats {
                 0 => {
                     // good
                     let statvfs = statvfs.assume_init();
-                    Ok(Some(Stats {
+                    Some(Stats {
                         bsize: statvfs.f_bsize as u64,
                         blocks: statvfs.f_blocks as u64,
                         bfree: statvfs.f_bfree as u64,
@@ -40,19 +44,12 @@ impl Stats {
                         files: statvfs.f_files as u64,
                         ffree: statvfs.f_ffree as u64,
                         favail: statvfs.f_favail as u64,
-                    }))
-                }
-                -1 => {
-                    // the filesystem wasn't found, it's a strange one, for example a
-                    // docker one
-                    Ok(None)
+                    })
                 }
                 _ => {
-                    // unexpected
-                    Err(Error::UnexpectedStavfsReturn {
-                        code,
-                        path: mount_point.to_path_buf(),
-                    })
+                    // the filesystem wasn't found, it's a strange one, for example a
+                    // docker one
+                    None
                 }
             }
         }

@@ -16,7 +16,7 @@ impl Mount {
 }
 
 /// read all the mount points and load basic information on them
-pub fn read_mounts() -> Result<Vec<Mount>> {
+pub fn read_mounts() -> Result<Vec<Mount>, Error> {
     let labels = read_labels().ok();
     // we'll find the disk for a filesystem by taking the longest
     // disk whose name starts the one of our partition
@@ -38,7 +38,7 @@ pub fn read_mounts() -> Result<Vec<Mount>> {
                         .map(|label| label.label.clone())
                 });
             let disk = top_bd.map(|bd| Disk::new(bd.name.clone()));
-            let stats = Stats::from(&info.mount_point)?;
+            let stats = Stats::from(&info.mount_point);
             Ok(Mount { info, fs_label, disk, stats })
         })
         .collect()

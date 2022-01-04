@@ -29,11 +29,11 @@ mod sys;
 
 pub use {
     block_device::{BlockDevice, BlockDeviceList},
-    device_id::DeviceId,
+    device_id::*,
     disk::Disk,
-    error::{Error, Result},
+    error::*,
     label::{read_labels, Labelling},
     mount::{read_mounts, Mount},
-    mountinfo::{read_mountinfo, MountId, MountInfo},
+    mountinfo::*,
     stats::Stats,
 };

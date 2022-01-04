@@ -1,7 +1,9 @@
 use {
     super::*,
+    snafu::prelude::*,
     std::{
         fs,
+        path::PathBuf,
     },
 };
 
@@ -17,8 +19,10 @@ pub struct Labelling {
 ///
 /// An error can't be excluded as not all systems expose
 /// this information the way lfs-core reads it.
-pub fn read_labels() -> Result<Vec<Labelling>> {
-    let entries = fs::read_dir("/dev/disk/by-label")?;
+pub fn read_labels() -> Result<Vec<Labelling>, Error> {
+    let path = "/dev/disk/by-label";
+    let entries = fs::read_dir(path)
+        .with_context(|_| CantReadDirSnafu { path: PathBuf::from(path) })?;
     let labels = entries
         .filter_map(|entry| entry.ok())
         .filter_map(|entry| {

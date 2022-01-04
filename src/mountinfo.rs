@@ -1,9 +1,10 @@
 use {
     crate::*,
     lazy_regex::*,
+    snafu::prelude::*,
     std::{
         path::PathBuf,
-        str::{FromStr, SplitWhitespace},
+        str::FromStr,
     },
 };
 
@@ -24,30 +25,43 @@ pub struct MountInfo {
     pub bound: bool,
 }
 
+#[derive(Debug, Snafu)]
+#[snafu(display("Could not parse {line} as mount info"))]
+pub struct ParseMountInfoError {
+    line: String,
+}
+
 impl FromStr for MountInfo {
-    type Err = Error;
-    fn from_str(line: &str) -> Result<Self> {
-        // this parsing is based on `man 5 proc`
-        let mut tokens = line.split_whitespace();
-        let tokens = &mut tokens;
-        let id = next(tokens)?.parse()?;
-        let parent = next(tokens)?.parse()?;
-        let dev = next(tokens)?.parse()?;
-        let root = str_to_pathbuf(next(tokens)?);
-        let mount_point = str_to_pathbuf(next(tokens)?);
-        skip_until(tokens, "-")?;
-        let fs_type = next(tokens)?.to_string();
-        let fs = next(tokens)?.to_string();
-        Ok(Self {
-            id,
-            parent,
-            dev,
-            root,
-            mount_point,
-            fs,
-            fs_type,
-            bound: false, // determined by post-treatment
-        })
+    type Err = ParseMountInfoError;
+    fn from_str(line: &str) -> Result<Self, Self::Err> {
+        (|| {
+            // this parsing is based on `man 5 proc`
+            let mut tokens = line.split_whitespace();
+            let tokens = &mut tokens;
+            let id = tokens.next()?.parse().ok()?;
+            let parent = tokens.next()?.parse().ok()?;
+            let dev = tokens.next()?.parse().ok()?;
+            let root = str_to_pathbuf(tokens.next()?);
+            let mount_point = str_to_pathbuf(tokens.next()?);
+            let fs_type = loop {
+                let token = tokens.next()?;
+                if token != "-" {
+                    break token;
+                }
+            };
+            let fs_type = fs_type.to_string();
+            let fs = tokens.next()?.to_string();
+            Some(Self {
+                id,
+                parent,
+                dev,
+                root,
+                mount_point,
+                fs,
+                fs_type,
+                bound: false, // determined by post-treatment
+            })
+        })().with_context(|| ParseMountInfoSnafu { line })
     }
 }
 
@@ -71,25 +85,28 @@ fn str_to_pathbuf(s: &str) -> PathBuf {
     PathBuf::from(sys::decode_string(s))
 }
 
-fn next<'a, 'b>(split: &'b mut SplitWhitespace<'a>) -> Result<&'a str> {
-    split.next().ok_or(Error::UnexpectedFormat)
-}
-fn skip_until(split: &mut SplitWhitespace, sep: &'static str) -> Result<()> {
-    loop {
-        if next(split)? == sep {
-            break;
-        }
-    }
-    Ok(())
-}
-
 /// read all the mount points
-pub fn read_mountinfo() -> Result<Vec<MountInfo>> {
+pub fn read_mountinfo() -> Result<Vec<MountInfo>, Error> {
     let mut mounts: Vec<MountInfo> = Vec::new();
-    for line in sys::read_file("/proc/self/mountinfo")?.trim().split('\n') {
-        let mut mount: MountInfo = line.parse()?;
+    let path = "/proc/self/mountinfo";
+    let file_content = sys::read_file(path)
+        .with_context(|_| CantReadDirSnafu { path: PathBuf::from(path) })?;
+    for line in file_content.trim().split('\n') {
+        let mut mount: MountInfo = line.parse()
+            .map_err(|source| Error::ParseMountInfo { source })?;
         mount.bound = mounts.iter().any(|m| m.dev == mount.dev);
         mounts.push(mount);
     }
     Ok(mounts)
+}
+
+#[test]
+fn test_from_str() {
+    let mi = MountInfo::from_str(
+        "47 21 0:41 / /dev/hugepages rw,relatime shared:27 - hugetlbfs hugetlbfs rw,pagesize=2M"
+    ).unwrap();
+    assert_eq!(mi.id, 47);
+    assert_eq!(mi.dev, DeviceId::new(0, 41));
+    assert_eq!(mi.root, PathBuf::from("/"));
+    assert_eq!(mi.mount_point, PathBuf::from("/dev/hugepages"));
 }

@@ -1,6 +1,6 @@
 [package]
 name = "lfs-core"
-version = "0.7.0"
+version = "0.8.0-dev"
 authors = ["dystroy <denys.seguret@gmail.com>"]
 edition = "2021"
 keywords = ["linux", "filesystem", "fs"]
@@ -11,6 +11,6 @@ repository = "https://github.com/Canop/lfs-core"
 readme = "README.md"
 
 [dependencies]
-libc = "0.2"
-thiserror = "1.0"
 lazy-regex = "2.2"
+libc = "0.2"
+snafu = "0.7"
