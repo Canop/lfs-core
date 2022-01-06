@@ -42,13 +42,13 @@ impl FromStr for MountInfo {
             let dev = tokens.next()?.parse().ok()?;
             let root = str_to_pathbuf(tokens.next()?);
             let mount_point = str_to_pathbuf(tokens.next()?);
-            let fs_type = loop {
+            loop {
                 let token = tokens.next()?;
-                if token != "-" {
-                    break token;
+                if token == "-" {
+                    break;
                 }
             };
-            let fs_type = fs_type.to_string();
+            let fs_type = tokens.next()?.to_string();
             let fs = tokens.next()?.to_string();
             Some(Self {
                 id,
@@ -108,4 +108,12 @@ fn test_from_str() {
     assert_eq!(mi.dev, DeviceId::new(0, 41));
     assert_eq!(mi.root, PathBuf::from("/"));
     assert_eq!(mi.mount_point, PathBuf::from("/dev/hugepages"));
+
+    let mi = MountInfo::from_str(
+        "106 26 8:17 / /home/dys/dev rw,relatime shared:57 - xfs /dev/sdb1 rw,attr2,inode64,noquota"
+    ).unwrap();
+    assert_eq!(mi.id, 106);
+    assert_eq!(mi.dev, DeviceId::new(8, 17));
+    assert_eq!(&mi.fs, "/dev/sdb1");
+    assert_eq!(&mi.fs_type, "xfs");
 }
