@@ -21,6 +21,7 @@ mod block_device;
 mod device_id;
 mod disk;
 mod error;
+mod inodes;
 mod label;
 mod mount;
 mod mountinfo;
@@ -32,6 +33,7 @@ pub use {
     device_id::*,
     disk::Disk,
     error::*,
+    inodes::Inodes,
     label::{read_labels, Labelling},
     mount::{read_mounts, Mount},
     mountinfo::*,

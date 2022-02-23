@@ -1,4 +1,5 @@
 use {
+    crate::Inodes,
     std::{
         ffi::CString,
         mem,
@@ -18,12 +19,8 @@ pub struct Stats {
     pub bfree: u64,
     /// number of free blocks for underprivileged users
     pub bavail: u64,
-    /// number of inodes
-    pub files: u64,
-    /// number of free inodes
-    pub ffree: u64,
-    /// number of free inodes for underpriviledged users
-    pub favail: u64,
+    /// information relative to inodes, if available
+    pub inodes: Option<Inodes>,
 }
 
 impl Stats {
@@ -36,14 +33,15 @@ impl Stats {
                 0 => {
                     // good
                     let statvfs = statvfs.assume_init();
+                    let files = statvfs.f_files as u64;
+                    let ffree = statvfs.f_ffree as u64;
+                    let favail = statvfs.f_favail as u64;
                     Some(Stats {
                         bsize: statvfs.f_bsize as u64,
                         blocks: statvfs.f_blocks as u64,
                         bfree: statvfs.f_bfree as u64,
                         bavail: statvfs.f_bavail as u64,
-                        files: statvfs.f_files as u64,
-                        ffree: statvfs.f_ffree as u64,
-                        favail: statvfs.f_favail as u64,
+                        inodes: Inodes::new(files, ffree, favail),
                     })
                 }
                 _ => {
@@ -62,16 +60,6 @@ impl Stats {
     }
     pub fn used(&self) -> u64 {
         self.size() - self.available()
-    }
-    pub fn inodes_used(&self) -> u64 {
-        self.files - self.favail // this will panic on unconsistent data
-    }
-    pub fn inodes_use_share(&self) -> f64 {
-        if self.files == 0 {
-            0.0
-        } else {
-            self.inodes_used() as f64 / self.files as f64
-        }
     }
     pub fn use_share(&self) -> f64 {
         if self.size() == 0 {
