@@ -4,7 +4,7 @@ use {
 };
 
 /// Id of a device, as can be found in MetadataExt.dev().
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DeviceId {
     pub major: u32,
     pub minor: u32,

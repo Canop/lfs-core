@@ -13,6 +13,11 @@ impl Mount {
     pub fn size(&self) -> u64 {
         self.stats.as_ref().map_or(0, |s| s.size())
     }
+    pub fn inodes(&self) -> Option<&Inodes> {
+        self.stats
+            .as_ref()
+            .and_then(|stats| stats.inodes.as_ref())
+    }
 }
 
 /// read all the mount points and load basic information on them
