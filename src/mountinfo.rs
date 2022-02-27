@@ -8,6 +8,8 @@ use {
     },
 };
 
+static REMOTE_ONLY_FS_TYPES: &[&str] = &["afs", "coda", "auristorfs", "fhgfs", "gpfs", "ibrix", "ocfs2", "vxfs"];
+
 /// An id of a mount
 pub type MountId = u32;
 
@@ -23,6 +25,30 @@ pub struct MountInfo {
     pub fs_type: String,
     /// whether it's a bound mount (usually mirroring part of another device)
     pub bound: bool,
+}
+
+impl MountInfo {
+    /// return `<name>` when the path is `/dev/mapper/<name>`
+    pub fn dm_name(&self) -> Option<&str> {
+        regex_captures!(r#"^/dev/mapper/([^/]+)$"#, &self.fs)
+            .map(|(_, dm_name)| dm_name)
+    }
+    /// return the last token of the fs path
+    pub fn fs_name(&self) -> Option<&str> {
+        regex_find!(r#"[^\\/]+$"#, &self.fs)
+    }
+    /// tell whether the mount looks remote
+    ///
+    /// Heuristics copied from https://github.com/coreutils/gnulib/blob/master/lib/mountlist.c
+    pub fn is_remote(&self) -> bool {
+        self.fs.contains(':')
+            || (
+                self.fs.starts_with("//")
+                && ["cifs", "smb3", "smbfs"].contains(&self.fs_type.as_ref())
+            )
+            || REMOTE_ONLY_FS_TYPES.contains(&self.fs_type.as_ref())
+            || self.fs == "-hosts"
+    }
 }
 
 #[derive(Debug, Snafu)]
@@ -61,18 +87,6 @@ impl FromStr for MountInfo {
                 bound: false, // determined by post-treatment
             })
         })().with_context(|| ParseMountInfoSnafu { line })
-    }
-}
-
-impl MountInfo {
-    /// return `<name>` when the path is `/dev/mapper/<name>`
-    pub fn dm_name(&self) -> Option<&str> {
-        regex_captures!(r#"^/dev/mapper/([^/]+)$"#, &self.fs)
-            .map(|(_, dm_name)| dm_name)
-    }
-    /// return the last token of the fs path
-    pub fn fs_name(&self) -> Option<&str> {
-        regex_find!(r#"[^\\/]+$"#, &self.fs)
     }
 }
 
