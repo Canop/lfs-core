@@ -37,5 +37,5 @@ pub use {
     label::{read_labels, Labelling},
     mount::{read_mounts, Mount},
     mountinfo::*,
-    stats::Stats,
+    stats::*,
 };

@@ -23,8 +23,19 @@ pub struct Stats {
     pub inodes: Option<Inodes>,
 }
 
+#[derive(Debug, snafu::Snafu, Clone, Copy, PartialEq, Eq)]
+#[snafu(visibility(pub(crate)))]
+pub enum StatsError {
+
+    #[snafu(display("Could not stat mount point"))]
+    Unreachable,
+
+    #[snafu(display("Unconsistent stats"))]
+    Unconsistent,
+}
+
 impl Stats {
-    pub fn from(mount_point: &Path) -> Option<Self> {
+    pub fn from(mount_point: &Path) -> Result<Self, StatsError> {
         let c_mount_point = CString::new(mount_point.as_os_str().as_bytes()).unwrap();
         unsafe {
             let mut statvfs = mem::MaybeUninit::<libc::statvfs>::uninit();
@@ -40,7 +51,7 @@ impl Stats {
                     let bavail = statvfs.f_bavail as u64;
                     if bsize == 0 || blocks == 0 || bfree > blocks || bavail > blocks {
                         // unconsistent or void data
-                        return None;
+                        return Err(StatsError::Unconsistent);
                     }
 
                     // inodes info, will be checked in Inodes::new
@@ -49,7 +60,7 @@ impl Stats {
                     let favail = statvfs.f_favail as u64;
                     let inodes = Inodes::new(files, ffree, favail);
 
-                    Some(Stats {
+                    Ok(Stats {
                         bsize,
                         blocks,
                         bfree,
@@ -58,10 +69,9 @@ impl Stats {
                     })
                 }
                 _ => {
-                    // println!("couldn't read {:?}", mount_point);
                     // the filesystem wasn't found, it's a strange one, for example a
                     // docker one, or a disconnected remote one
-                    None
+                    Err(StatsError::Unreachable)
                 }
             }
         }
