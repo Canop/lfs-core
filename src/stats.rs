@@ -32,6 +32,10 @@ pub enum StatsError {
 
     #[snafu(display("Unconsistent stats"))]
     Unconsistent,
+
+    /// Options made us not even try
+    #[snafu(display("Excluded"))]
+    Excluded,
 }
 
 impl Stats {

@@ -37,8 +37,25 @@ impl Mount {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ReadOptions {
+    remote_stats: bool,
+}
+impl Default for ReadOptions {
+    fn default() -> Self {
+        Self {
+            remote_stats: true,
+        }
+    }
+}
+impl ReadOptions {
+    pub fn remote_stats(&mut self, v: bool) {
+        self.remote_stats = v;
+    }
+}
+
 /// Read all the mount points and load basic information on them
-pub fn read_mounts() -> Result<Vec<Mount>, Error> {
+pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
     let labels = read_labels().ok();
     // we'll find the disk for a filesystem by taking the longest
     // disk whose name starts the one of our partition
@@ -60,7 +77,11 @@ pub fn read_mounts() -> Result<Vec<Mount>, Error> {
                         .map(|label| label.label.clone())
                 });
             let disk = top_bd.map(|bd| Disk::new(bd.name.clone()));
-            let stats = Stats::from(&info.mount_point);
+            let stats = if !options.remote_stats && info.is_remote() {
+                Err(StatsError::Excluded)
+            } else {
+                Stats::from(&info.mount_point)
+            };
             Ok(Mount { info, fs_label, disk, stats })
         })
         .collect()

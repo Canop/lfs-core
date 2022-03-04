@@ -29,13 +29,13 @@ mod stats;
 mod sys;
 
 pub use {
-    block_device::{BlockDevice, BlockDeviceList},
+    block_device::*,
     device_id::*,
-    disk::Disk,
+    disk::*,
     error::*,
-    inodes::Inodes,
-    label::{read_labels, Labelling},
-    mount::{read_mounts, Mount},
+    inodes::*,
+    label::*,
+    mount::*,
     mountinfo::*,
     stats::*,
 };
