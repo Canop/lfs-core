@@ -4,9 +4,10 @@ Use `lfs_core::read_mounts` to get information on all mounted volumes on a unix 
 
 ```
 // get all mount points
-let mut mounts = lfs_core::read_mounts().unwrap();
+let options = lfs_core::ReadOptions::default();
+let mut mounts = lfs_core::read_mounts(&options).unwrap();
 // only keep the one with size stats
-mounts.retain(|m| m.stats.is_some());
+mounts.retain(|m| m.stats.is_ok());
 // print them
 for mount in mounts {
     dbg!(mount);
