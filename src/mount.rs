@@ -7,6 +7,8 @@ pub struct Mount {
     pub fs_label: Option<String>,
     pub disk: Option<Disk>,
     pub stats: Result<Stats, StatsError>,
+    pub uuid: Option<String>,
+    pub part_uuid: Option<String>,
 }
 
 impl Mount {
@@ -56,7 +58,10 @@ impl ReadOptions {
 
 /// Read all the mount points and load basic information on them
 pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
-    let labels = read_labels().ok();
+    let by_label = read_by("label").ok();
+    let by_uuid = read_by("uuid").ok();
+    let by_partuuid = read_by("partuuid").ok();
+
     // we'll find the disk for a filesystem by taking the longest
     // disk whose name starts the one of our partition
     // hence the sorting.
@@ -69,20 +74,23 @@ pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
                 info.dm_name(),
                 info.fs_name(),
             );
-            let fs_label = labels.as_ref()
-                .and_then(|labels| {
-                    labels
-                        .iter()
-                        .find(|label| label.fs_name == info.fs)
-                        .map(|label| label.label.clone())
-                });
+            let fs_label = get_label(&info.fs, by_label.as_deref());
+            let uuid = get_label(&info.fs, by_uuid.as_deref());
+            let part_uuid = get_label(&info.fs, by_partuuid.as_deref());
             let disk = top_bd.map(|bd| Disk::new(bd.name.clone()));
             let stats = if !options.remote_stats && info.is_remote() {
                 Err(StatsError::Excluded)
             } else {
                 Stats::from(&info.mount_point)
             };
-            Ok(Mount { info, fs_label, disk, stats })
+            Ok(Mount {
+                info,
+                fs_label,
+                disk,
+                stats,
+                uuid,
+                part_uuid,
+            })
         })
         .collect()
 }

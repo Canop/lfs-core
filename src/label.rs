@@ -12,13 +12,30 @@ pub struct Labelling {
     pub fs_name: String,
 }
 
-/// try to find all file-system labels
+pub fn get_label(
+    fs_name: &str,
+    labellings: Option<&[Labelling]>,
+) -> Option<String> {
+    labellings.as_ref()
+        .and_then(|labels| {
+            labels
+                .iter()
+                .find(|label| label.fs_name == fs_name)
+                .map(|label| label.label.clone())
+        })
+}
+
+/// try to read all mappings defined in /dev/disk/by-<by_kind>,
+/// where by_kind is one of "label", "uuid", "partuuid", "diskseq", etc.
 ///
 /// An error can't be excluded as not all systems expose
 /// this information the way lfs-core reads it.
-pub fn read_labels() -> Result<Vec<Labelling>, Error> {
-    let path = "/dev/disk/by-label";
-    let entries = fs::read_dir(path).context(CantReadDirSnafu { path })?;
+pub fn read_by(
+    by_kind: &str,
+) -> Result<Vec<Labelling>, Error> {
+    let path = format!("/dev/disk/by-{by_kind}");
+    let entries = fs::read_dir(&path)
+        .context(CantReadDirSnafu { path })?;
     let labels = entries
         .filter_map(|entry| entry.ok())
         .filter_map(|entry| {
