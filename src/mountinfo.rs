@@ -16,12 +16,12 @@ pub type MountId = u32;
 /// A mount point as described in /proc/self/mountinfo
 #[derive(Debug, Clone)]
 pub struct MountInfo {
-    pub id: MountId,
-    pub parent: MountId,
+    pub id: Option<MountId>,
+    pub parent: Option<MountId>,
     pub dev: DeviceId,
     pub root: PathBuf,
     pub mount_point: PathBuf,
-    pub fs: String,
+    pub fs: String, // rename into "node" ?
     pub fs_type: String,
     /// whether it's a bound mount (usually mirroring part of another device)
     pub bound: bool,
@@ -63,8 +63,15 @@ impl FromStr for MountInfo {
         (|| {
             // this parsing is based on `man 5 proc`
             let mut tokens = line.split_whitespace();
+
             let id = tokens.next()?.parse().ok()?;
             let parent = tokens.next()?.parse().ok()?;
+
+            // while linux mountinfo need an id and a parent id, they're optional in
+            // the more global model
+            let id = Some(id);
+            let parent = Some(parent);
+
             let dev = tokens.next()?.parse().ok()?;
             let root = str_to_pathbuf(tokens.next()?);
             let mount_point = str_to_pathbuf(tokens.next()?);

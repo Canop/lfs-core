@@ -1,4 +1,6 @@
-use super::*;
+use {
+    crate::*,
+};
 
 /// A mount point
 #[derive(Debug, Clone)]
@@ -39,7 +41,7 @@ impl Mount {
 
 #[derive(Debug, Clone)]
 pub struct ReadOptions {
-    remote_stats: bool,
+    pub(crate) remote_stats: bool,
 }
 impl Default for ReadOptions {
     fn default() -> Self {
@@ -54,35 +56,4 @@ impl ReadOptions {
     }
 }
 
-/// Read all the mount points and load basic information on them
-pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
-    let labels = read_labels().ok();
-    // we'll find the disk for a filesystem by taking the longest
-    // disk whose name starts the one of our partition
-    // hence the sorting.
-    let bd_list = BlockDeviceList::read()?;
-    read_mountinfo()?
-        .drain(..)
-        .map(|info| {
-            let top_bd = bd_list.find_top(
-                info.dev,
-                info.dm_name(),
-                info.fs_name(),
-            );
-            let fs_label = labels.as_ref()
-                .and_then(|labels| {
-                    labels
-                        .iter()
-                        .find(|label| label.fs_name == info.fs)
-                        .map(|label| label.label.clone())
-                });
-            let disk = top_bd.map(|bd| Disk::new(bd.name.clone()));
-            let stats = if !options.remote_stats && info.is_remote() {
-                Err(StatsError::Excluded)
-            } else {
-                Stats::from(&info.mount_point)
-            };
-            Ok(Mount { info, fs_label, disk, stats })
-        })
-        .collect()
-}
+

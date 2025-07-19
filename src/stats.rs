@@ -8,13 +8,18 @@ use {
     },
 };
 
-/// inode & blocs information given by statvfs
+/// inode & blocs information
+///
+/// The semantics is mostly the one of statvfs, with addition of
+///  bused which is necesssary for volumes freely growing in containers
 #[derive(Debug, Clone)]
 pub struct Stats {
     /// block size
     pub bsize: u64,
     /// number of blocks
     pub blocks: u64,
+    /// not provided by statvfs
+    pub bused: u64,
     /// number of free blocks
     pub bfree: u64,
     /// number of free blocks for underprivileged users
@@ -58,6 +63,9 @@ impl Stats {
                         return Err(StatsError::Unconsistent);
                     }
 
+                    // statvfs doesn't provide bused
+                    let bused = blocks - bavail;
+
                     // inodes info, will be checked in Inodes::new
                     let files = statvfs.f_files as u64;
                     let ffree = statvfs.f_ffree as u64;
@@ -67,6 +75,7 @@ impl Stats {
                     Ok(Stats {
                         bsize,
                         blocks,
+                        bused,
                         bfree,
                         bavail,
                         inodes,
@@ -86,8 +95,9 @@ impl Stats {
     pub fn available(&self) -> u64 {
         self.bsize * self.bavail
     }
+    /// Space used in the volume (including unreadable fs metadata)
     pub fn used(&self) -> u64 {
-        self.size() - self.available()
+        self.bsize * self.bused
     }
     pub fn use_share(&self) -> f64 {
         if self.size() == 0 {

@@ -3,6 +3,12 @@
 #[snafu(visibility(pub(crate)))]
 pub enum Error {
 
+    #[snafu(display("Couldn't execute {exe}"))]
+    CantExecute {
+        source: std::io::Error,
+        exe: String,
+    },
+
     #[snafu(display("Could not read file {path:?}"))]
     CantReadFile {
         source: std::io::Error,
