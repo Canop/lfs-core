@@ -6,6 +6,12 @@ use {
     crate::*,
     block_device::*,
     lazy_regex::*,
+    std::{
+        ffi::CString,
+        mem,
+        os::unix::ffi::OsStrExt,
+        path::Path,
+    },
 };
 
 pub fn new_disk(name: String) -> Disk {
@@ -50,7 +56,7 @@ pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
             let stats = if !options.remote_stats && info.is_remote() {
                 Err(StatsError::Excluded)
             } else {
-                Stats::from(&info.mount_point)
+                read_stats(&info.mount_point)
             };
             Ok(Mount {
                 info,
@@ -62,4 +68,50 @@ pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
             })
         })
         .collect()
+}
+
+pub fn read_stats(mount_point: &Path) -> Result<Stats, StatsError> {
+    let c_mount_point = CString::new(mount_point.as_os_str().as_bytes()).unwrap();
+    unsafe {
+        let mut statvfs = mem::MaybeUninit::<libc::statvfs>::uninit();
+        let code = libc::statvfs(c_mount_point.as_ptr(), statvfs.as_mut_ptr());
+        match code {
+            0 => {
+                let statvfs = statvfs.assume_init();
+
+                // blocks info
+                let bsize = statvfs.f_bsize;
+                let blocks = statvfs.f_blocks;
+                let bfree = statvfs.f_bfree;
+                let bavail = statvfs.f_bavail;
+                if bsize == 0 || blocks == 0 || bfree > blocks || bavail > blocks {
+                    // unconsistent or void data
+                    return Err(StatsError::Unconsistent);
+                }
+
+                // statvfs doesn't provide bused
+                let bused = blocks - bavail;
+
+                // inodes info, will be checked in Inodes::new
+                let files = statvfs.f_files;
+                let ffree = statvfs.f_ffree;
+                let favail = statvfs.f_favail;
+                let inodes = Inodes::new(files, ffree, favail);
+
+                Ok(Stats {
+                    bsize,
+                    blocks,
+                    bused,
+                    bfree,
+                    bavail,
+                    inodes,
+                })
+            }
+            _ => {
+                // the filesystem wasn't found, it's a strange one, for example a
+                // docker one, or a disconnected remote one
+                Err(StatsError::Unreachable)
+            }
+        }
+    }
 }
