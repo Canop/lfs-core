@@ -51,7 +51,7 @@ impl BlockDeviceList {
     ) -> Option<&BlockDevice> {
         self.list
             .iter()
-            .find(|bd| bd.dm_name.as_ref().map_or(false, |s| s == dm_name))
+            .find(|bd| bd.dm_name.as_ref().is_some_and(|s| s == dm_name))
     }
     pub fn find_by_name(
         &self,
@@ -94,7 +94,7 @@ fn append_child_block_devices(
                 continue;
             }
             let name = e.file_name().to_string_lossy().to_string();
-            let dm_name = sys::read_file(&format!("/sys/block/{}/dm/name", name))
+            let dm_name = sys::read_file(format!("/sys/block/{name}/dm/name"))
                 .ok()
                 .map(|s| s.trim().to_string());
             list.push(BlockDevice {

@@ -24,7 +24,7 @@ impl fmt::Display for DeviceId {
         &self,
         f: &mut fmt::Formatter,
     ) -> fmt::Result {
-        write("{}:{}", self.major, self.minor)
+        write!(f, "{}:{}", self.major, self.minor)
     }
 }
 

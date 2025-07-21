@@ -54,9 +54,9 @@ impl Stats {
 
                     // blocks info
                     let bsize = statvfs.f_bsize;
-                    let blocks = statvfs.f_blocks as u64;
-                    let bfree = statvfs.f_bfree as u64;
-                    let bavail = statvfs.f_bavail as u64;
+                    let blocks = statvfs.f_blocks;
+                    let bfree = statvfs.f_bfree;
+                    let bavail = statvfs.f_bavail;
                     if bsize == 0 || blocks == 0 || bfree > blocks || bavail > blocks {
                         // unconsistent or void data
                         return Err(StatsError::Unconsistent);
@@ -66,9 +66,9 @@ impl Stats {
                     let bused = blocks - bavail;
 
                     // inodes info, will be checked in Inodes::new
-                    let files = statvfs.f_files as u64;
-                    let ffree = statvfs.f_ffree as u64;
-                    let favail = statvfs.f_favail as u64;
+                    let files = statvfs.f_files;
+                    let ffree = statvfs.f_ffree;
+                    let favail = statvfs.f_favail;
                     let inodes = Inodes::new(files, ffree, favail);
 
                     Ok(Stats {
