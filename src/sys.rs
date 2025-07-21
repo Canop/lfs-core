@@ -2,7 +2,10 @@ use {
     lazy_regex::*,
     std::{
         fs::File,
-        io::{self, Read},
+        io::{
+            self,
+            Read,
+        },
         path::Path,
     },
 };
@@ -16,6 +19,7 @@ pub fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
 }
 
 /// read a system file into a boolean (assuming "0" or "1")
+#[cfg(target_os = "linux")]
 pub fn read_file_as_bool<P: AsRef<Path>>(path: P) -> Option<bool> {
     read_file(path).ok().and_then(|c| match c.trim() {
         "0" => Some(false),

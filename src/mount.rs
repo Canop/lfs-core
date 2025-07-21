@@ -1,6 +1,4 @@
-use {
-    crate::*,
-};
+use crate::*;
 
 /// A mount point
 #[derive(Debug, Clone)]
@@ -9,6 +7,8 @@ pub struct Mount {
     pub fs_label: Option<String>,
     pub disk: Option<Disk>,
     pub stats: Result<Stats, StatsError>,
+    pub uuid: Option<String>,
+    pub part_uuid: Option<String>,
 }
 
 impl Mount {
@@ -45,15 +45,14 @@ pub struct ReadOptions {
 }
 impl Default for ReadOptions {
     fn default() -> Self {
-        Self {
-            remote_stats: true,
-        }
+        Self { remote_stats: true }
     }
 }
 impl ReadOptions {
-    pub fn remote_stats(&mut self, v: bool) {
+    pub fn remote_stats(
+        &mut self,
+        v: bool,
+    ) {
         self.remote_stats = v;
     }
 }
-
-

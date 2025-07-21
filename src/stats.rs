@@ -31,7 +31,6 @@ pub struct Stats {
 #[derive(Debug, snafu::Snafu, Clone, Copy, PartialEq, Eq)]
 #[snafu(visibility(pub(crate)))]
 pub enum StatsError {
-
     #[snafu(display("Could not stat mount point"))]
     Unreachable,
 
@@ -54,7 +53,7 @@ impl Stats {
                     let statvfs = statvfs.assume_init();
 
                     // blocks info
-                    let bsize = statvfs.f_bsize as u64;
+                    let bsize = statvfs.f_bsize;
                     let blocks = statvfs.f_blocks as u64;
                     let bfree = statvfs.f_bfree as u64;
                     let bavail = statvfs.f_bavail as u64;
@@ -100,10 +99,10 @@ impl Stats {
         self.bsize * self.bused
     }
     pub fn use_share(&self) -> f64 {
-        if self.size() == 0 {
+        if self.blocks == 0 {
             0.0
         } else {
-            self.used() as f64 / (self.size() as f64)
+            (self.blocks - self.bfree) as f64 / self.blocks as f64
         }
     }
 }

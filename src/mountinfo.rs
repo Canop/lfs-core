@@ -8,7 +8,16 @@ use {
     },
 };
 
-static REMOTE_ONLY_FS_TYPES: &[&str] = &["afs", "coda", "auristorfs", "fhgfs", "gpfs", "ibrix", "ocfs2", "vxfs"];
+static REMOTE_ONLY_FS_TYPES: &[&str] = &[
+    "afs",
+    "coda",
+    "auristorfs",
+    "fhgfs",
+    "gpfs",
+    "ibrix",
+    "ocfs2",
+    "vxfs",
+];
 
 /// An id of a mount
 pub type MountId = u32;
@@ -30,8 +39,7 @@ pub struct MountInfo {
 impl MountInfo {
     /// return `<name>` when the path is `/dev/mapper/<name>`
     pub fn dm_name(&self) -> Option<&str> {
-        regex_captures!(r#"^/dev/mapper/([^/]+)$"#, &self.fs)
-            .map(|(_, dm_name)| dm_name)
+        regex_captures!(r#"^/dev/mapper/([^/]+)$"#, &self.fs).map(|(_, dm_name)| dm_name)
     }
     /// return the last token of the fs path
     pub fn fs_name(&self) -> Option<&str> {
@@ -42,10 +50,8 @@ impl MountInfo {
     /// Heuristics copied from https://github.com/coreutils/gnulib/blob/master/lib/mountlist.c
     pub fn is_remote(&self) -> bool {
         self.fs.contains(':')
-            || (
-                self.fs.starts_with("//")
-                && ["cifs", "smb3", "smbfs"].contains(&self.fs_type.as_ref())
-            )
+            || (self.fs.starts_with("//")
+                && ["cifs", "smb3", "smbfs"].contains(&self.fs_type.as_ref()))
             || REMOTE_ONLY_FS_TYPES.contains(&self.fs_type.as_ref())
             || self.fs == "-hosts"
     }
@@ -80,7 +86,7 @@ impl FromStr for MountInfo {
                 if token == "-" {
                     break;
                 }
-            };
+            }
             let fs_type = tokens.next()?.to_string();
             let fs = tokens.next()?.to_string();
             Some(Self {
@@ -93,7 +99,8 @@ impl FromStr for MountInfo {
                 fs_type,
                 bound: false, // determined by post-treatment
             })
-        })().with_context(|| ParseMountInfoSnafu { line })
+        })()
+        .with_context(|| ParseMountInfoSnafu { line })
     }
 }
 
@@ -109,10 +116,10 @@ fn str_to_pathbuf(s: &str) -> PathBuf {
 pub fn read_mountinfo() -> Result<Vec<MountInfo>, Error> {
     let mut mounts: Vec<MountInfo> = Vec::new();
     let path = "/proc/self/mountinfo";
-    let file_content = sys::read_file(path)
-        .context(CantReadDirSnafu { path })?;
+    let file_content = sys::read_file(path).context(CantReadDirSnafu { path })?;
     for line in file_content.trim().split('\n') {
-        let mut mount: MountInfo = line.parse()
+        let mut mount: MountInfo = line
+            .parse()
             .map_err(|source| Error::ParseMountInfo { source })?;
         mount.bound = mounts.iter().any(|m| m.dev == mount.dev);
         mounts.push(mount);
@@ -120,12 +127,14 @@ pub fn read_mountinfo() -> Result<Vec<MountInfo>, Error> {
     Ok(mounts)
 }
 
+#[cfg(target_os = "linux")]
 #[test]
 fn test_from_str() {
     let mi = MountInfo::from_str(
-        "47 21 0:41 / /dev/hugepages rw,relatime shared:27 - hugetlbfs hugetlbfs rw,pagesize=2M"
-    ).unwrap();
-    assert_eq!(mi.id, 47);
+        "47 21 0:41 / /dev/hugepages rw,relatime shared:27 - hugetlbfs hugetlbfs rw,pagesize=2M",
+    )
+    .unwrap();
+    assert_eq!(mi.id, Some(47));
     assert_eq!(mi.dev, DeviceId::new(0, 41));
     assert_eq!(mi.root, PathBuf::from("/"));
     assert_eq!(mi.mount_point, PathBuf::from("/dev/hugepages"));
@@ -133,7 +142,7 @@ fn test_from_str() {
     let mi = MountInfo::from_str(
         "106 26 8:17 / /home/dys/dev rw,relatime shared:57 - xfs /dev/sdb1 rw,attr2,inode64,noquota"
     ).unwrap();
-    assert_eq!(mi.id, 106);
+    assert_eq!(mi.id, Some(106));
     assert_eq!(mi.dev, DeviceId::new(8, 17));
     assert_eq!(&mi.fs, "/dev/sdb1");
     assert_eq!(&mi.fs_type, "xfs");

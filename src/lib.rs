@@ -22,8 +22,10 @@ mod disk;
 mod error;
 mod inodes;
 mod label;
-#[cfg(target_os="linux")] mod linux;
-#[cfg(target_os="macos")] mod macos;
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "macos")]
+mod macos;
 mod mount;
 mod mountinfo;
 mod stats;
@@ -39,14 +41,13 @@ pub use {
     stats::*,
 };
 
-#[cfg(target_os="linux")]
+#[cfg(target_os = "linux")]
 pub use linux::{
-    read_mounts,
     DeviceId,
+    read_mounts,
 };
-#[cfg(target_os="macos")]
+#[cfg(target_os = "macos")]
 pub use macos::{
-    read_mounts,
     DeviceId,
+    read_mounts,
 };
-
