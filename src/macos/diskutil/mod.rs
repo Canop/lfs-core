@@ -52,7 +52,6 @@ fn lines_to_device(lines: &[String]) -> Option<DuDevice> {
         let Some((_, key, value)) = regex_captures!(r"^\s+([^\:]+):\s+(.+)$", &line) else {
             continue;
         };
-        // println!("{key:?}={value:?}");
         match key {
             "Device Identifier" => {
                 id = Some(value.to_string());

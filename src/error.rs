@@ -22,4 +22,7 @@ pub enum Error {
 
     #[snafu(display("Unexpected format"))]
     UnexpectedFormat,
+
+    #[snafu(display("Error parsing device id"))]
+    ParseDeviceId,
 }

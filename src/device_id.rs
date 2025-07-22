@@ -54,7 +54,7 @@ impl FromStr for DeviceId {
 impl From<u64> for DeviceId {
     fn from(num: u64) -> Self {
         Self {
-            major: (num >> 8) as u32,
+            major: ((num >> 8) % 65535) as u32,
             minor: (num & 0xFF) as u32,
         }
     }

@@ -3,13 +3,13 @@ mod diskutil;
 use {
     crate::*,
     diskutil::*,
+    snafu::prelude::*,
+    std::process,
 };
-
-pub type DeviceId = String;
 
 #[derive(Debug)]
 struct DuDevice {
-    id: DeviceId,                  // ex: "disk3s3s1"
+    id: String,                    // ex: "disk3s3s1"
     node: String,                  // ex: "/dev/disk3s3s1"
     file_system: Option<String>,   // ex: "APFS"
     mount_point: Option<String>,   // ex: "/"
@@ -45,6 +45,19 @@ impl DuDevice {
             inodes: None, // TODO
         })
     }
+}
+
+/// Query the 'stat' command for the unix device id, from the BSD device name
+///
+/// eg /dev/disk3s4 -> 1:13
+fn query_device_id(device_name: &str) -> Result<DeviceId, Error> {
+    let output = process::Command::new("stat")
+        .args(["-f", "%Hr:%Lr", device_name])
+        .output()
+        .with_context(|_| CantExecuteSnafu { exe: "stat" })?;
+    let output = str::from_utf8(&output.stdout).map_err(|_| Error::UnexpectedFormat)?;
+    let device_id: DeviceId = output.trim().parse().map_err(|_| Error::ParseDeviceId)?;
+    Ok(device_id)
 }
 
 /// Read all the mount points and load basic information on them
@@ -83,10 +96,11 @@ pub fn read_mounts(_options: &ReadOptions) -> Result<Vec<Mount>, Error> {
             lvm: false,
             crypted: encrypted.unwrap_or(false),
         };
+        let dev = query_device_id(&node)?;
         let mut info = MountInfo {
             id: None,
             parent: None,
-            dev: id,
+            dev,
             root: mount_point.clone().into(), // unsure
             mount_point: mount_point.into(),
             fs: node,

@@ -1,7 +1,5 @@
 mod block_device;
-mod device_id;
 
-pub use device_id::DeviceId;
 use {
     crate::*,
     block_device::*,

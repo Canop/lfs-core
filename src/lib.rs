@@ -18,6 +18,7 @@ The [lfs](https://github.com/Canop/lfs) application is a viewer for lfs-core and
 
 */
 
+mod device_id;
 mod disk;
 mod error;
 mod inodes;
@@ -32,6 +33,7 @@ mod stats;
 mod sys;
 
 pub use {
+    device_id::*,
     disk::*,
     error::*,
     inodes::*,
@@ -42,12 +44,6 @@ pub use {
 };
 
 #[cfg(target_os = "linux")]
-pub use linux::{
-    DeviceId,
-    read_mounts,
-};
+pub use linux::read_mounts;
 #[cfg(target_os = "macos")]
-pub use macos::{
-    DeviceId,
-    read_mounts,
-};
+pub use macos::read_mounts;
