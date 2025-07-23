@@ -48,6 +48,8 @@ fn lines_to_device(lines: &[String]) -> Option<DuDevice> {
     let mut container_total_space = None;
     let mut container_free_space = None;
     let mut allocation_block_size = None;
+    let mut uuid = None;
+    let mut part_uuid = None;
     for line in lines {
         let Some((_, key, value)) = regex_captures!(r"^\s+([^\:]+):\s+(.+)$", &line) else {
             continue;
@@ -109,6 +111,12 @@ fn lines_to_device(lines: &[String]) -> Option<DuDevice> {
             "Allocation Block Size" => {
                 allocation_block_size = extract_bytes(value);
             }
+            "Volume UUID" => {
+                uuid = Some(value.to_string());
+            }
+            "Disk / Partition UUID" => {
+                part_uuid = Some(value.to_string());
+            }
             _ => {}
         }
     }
@@ -129,6 +137,8 @@ fn lines_to_device(lines: &[String]) -> Option<DuDevice> {
         container_total_space,
         container_free_space,
         allocation_block_size,
+        uuid,
+        part_uuid,
     })
 }
 

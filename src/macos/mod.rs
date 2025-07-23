@@ -25,6 +25,8 @@ struct DuDevice {
     container_total_space: Option<u64>,
     container_free_space: Option<u64>,
     allocation_block_size: Option<u64>,
+    uuid: Option<String>,
+    part_uuid: Option<String>,
 }
 
 impl DuDevice {
@@ -77,6 +79,8 @@ pub fn read_mounts(_options: &ReadOptions) -> Result<Vec<Mount>, Error> {
             mount_point,
             removable,
             solid_state,
+            uuid,
+            part_uuid,
             ..
         } = dev;
         let Some(mount_point) = mount_point else {
@@ -115,8 +119,8 @@ pub fn read_mounts(_options: &ReadOptions) -> Result<Vec<Mount>, Error> {
             fs_label: None, // TODO
             disk: Some(disk),
             stats,
-            uuid: None,
-            part_uuid: None,
+            uuid,
+            part_uuid,
         };
         mounts.push(mount);
     }
