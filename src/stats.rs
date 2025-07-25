@@ -3,7 +3,7 @@ use crate::Inodes;
 /// inode & blocs information
 ///
 /// The semantics is mostly the one of statvfs, with addition of
-///  bused which is necesssary for volumes freely growing in containers
+///  bused which is necessary for volumes freely growing in containers
 #[derive(Debug, Clone)]
 pub struct Stats {
     /// block size
