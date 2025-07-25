@@ -1,4 +1,3 @@
-
 /// inode information
 ///
 /// This structure isn't built if data aren't consistent
@@ -15,9 +14,17 @@ pub struct Inodes {
 impl Inodes {
     /// Create the structure if the given values are consistent,
     /// return None if they aren't.
-    pub fn new(files: u64, ffree: u64, favail: u64) -> Option<Self> {
+    pub fn new(
+        files: u64,
+        ffree: u64,
+        favail: u64,
+    ) -> Option<Self> {
         if files > 0 && ffree <= files && favail <= files {
-            Some(Self { files, ffree, favail })
+            Some(Self {
+                files,
+                ffree,
+                favail,
+            })
         } else {
             None
         }

@@ -1,6 +1,9 @@
 use {
     snafu::prelude::*,
-    std::str::FromStr,
+    std::{
+        fmt,
+        str::FromStr,
+    },
 };
 
 /// Id of a device, as can be found in MetadataExt.dev().
@@ -14,6 +17,15 @@ pub struct DeviceId {
 #[snafu(display("Could not parse {string} as a device id"))]
 pub struct ParseDeviceIdError {
     string: String,
+}
+
+impl fmt::Display for DeviceId {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter,
+    ) -> fmt::Result {
+        write!(f, "{}:{}", self.major, self.minor)
+    }
 }
 
 impl FromStr for DeviceId {
@@ -30,25 +42,29 @@ impl FromStr for DeviceId {
                 }
                 (Some(int), None, None) => {
                     let int: u64 = int.parse().ok()?;
-                    Some( int.into() )
+                    Some(int.into())
                 }
                 _ => None,
             }
-        })().with_context(|| ParseDeviceIdSnafu { string })
+        })()
+        .with_context(|| ParseDeviceIdSnafu { string })
     }
 }
 
 impl From<u64> for DeviceId {
     fn from(num: u64) -> Self {
         Self {
-            major: (num >> 8) as u32,
+            major: ((num >> 8) % 65535) as u32,
             minor: (num & 0xFF) as u32,
         }
     }
 }
 
 impl DeviceId {
-    pub fn new(major: u32, minor: u32) -> Self {
+    pub fn new(
+        major: u32,
+        minor: u32,
+    ) -> Self {
         Self { major, minor }
     }
 }

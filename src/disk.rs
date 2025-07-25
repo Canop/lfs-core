@@ -1,8 +1,3 @@
-use {
-    super::*,
-    lazy_regex::*,
-};
-
 /// what we have most looking like a physical device
 #[derive(Debug, Clone)]
 pub struct Disk {
@@ -17,8 +12,14 @@ pub struct Disk {
     /// Seems reliable when not mapped
     pub removable: Option<bool>,
 
+    /// whether the disk is read-only
+    pub read_only: Option<bool>,
+
     /// whether it's a RAM disk
     pub ram: bool,
+
+    /// disk image (Mac only right now)
+    pub image: bool,
 
     /// whether it's on LVM
     pub lvm: bool,
@@ -28,30 +29,14 @@ pub struct Disk {
 }
 
 impl Disk {
-    pub fn new(name: String) -> Self {
-        let rotational = sys::read_file_as_bool(&format!("/sys/block/{}/queue/rotational", name));
-        let removable = sys::read_file_as_bool(&format!("/sys/block/{}/removable", name));
-        let ram = regex_is_match!(r#"^zram\d*$"#, &name);
-        let dm_uuid = sys::read_file(&format!("/sys/block/{}/dm/uuid", name)).ok();
-        let crypted = dm_uuid
-            .as_ref()
-            .map_or(false, |uuid| uuid.starts_with("CRYPT-"));
-        let lvm = dm_uuid.map_or(false, |uuid| uuid.starts_with("LVM-"));
-        Self {
-            name,
-            rotational,
-            removable,
-            ram,
-            lvm,
-            crypted,
-        }
-    }
     /// a synthetic code trying to express the essence of the type of media,
     /// an empty str being returned when information couldn't be gathered.
     /// This code is for humans and may change in future minor versions.
     pub fn disk_type(&self) -> &'static str {
         if self.ram {
             "RAM"
+        } else if self.image {
+            "imag"
         } else if self.crypted {
             "crypt"
         } else if self.lvm {

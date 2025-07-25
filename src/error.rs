@@ -2,6 +2,8 @@
 #[derive(Debug, snafu::Snafu)]
 #[snafu(visibility(pub(crate)))]
 pub enum Error {
+    #[snafu(display("Couldn't execute {exe}"))]
+    CantExecute { source: std::io::Error, exe: String },
 
     #[snafu(display("Could not read file {path:?}"))]
     CantReadFile {
@@ -16,11 +18,11 @@ pub enum Error {
     },
 
     #[snafu(display("Could not parse mountinfo"))]
-    ParseMountInfo {
-        source: crate::ParseMountInfoError,
-    },
+    ParseMountInfo { source: crate::ParseMountInfoError },
 
     #[snafu(display("Unexpected format"))]
     UnexpectedFormat,
-}
 
+    #[snafu(display("Error parsing device id"))]
+    ParseDeviceId,
+}
