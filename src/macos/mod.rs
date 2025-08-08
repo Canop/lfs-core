@@ -4,7 +4,8 @@ use {
     crate::*,
     diskutil::*,
     snafu::prelude::*,
-    std::process,
+    std::fs,
+    std::os::unix::fs::MetadataExt,
 };
 
 #[derive(Debug)]
@@ -49,16 +50,14 @@ impl DuDevice {
     }
 }
 
-/// Query the 'stat' command for the unix device id, from the BSD device name
+/// Get the device id from the BSD device node
 ///
 /// eg /dev/disk3s4 -> 1:13
-fn query_device_id(device_name: &str) -> Result<DeviceId, Error> {
-    let output = process::Command::new("stat")
-        .args(["-f", "%Hr:%Lr", device_name])
-        .output()
-        .with_context(|_| CantExecuteSnafu { exe: "stat" })?;
-    let output = str::from_utf8(&output.stdout).map_err(|_| Error::UnexpectedFormat)?;
-    let device_id: DeviceId = output.trim().parse().map_err(|_| Error::ParseDeviceId)?;
+fn query_device_id(device_node: &str) -> Result<DeviceId, Error> {
+    let stat =
+        fs::metadata(device_node).with_context(|_| CantReadFileSnafu { path: device_node })?;
+    let rdev = stat.rdev();
+    let device_id = DeviceId::from(rdev);
     Ok(device_id)
 }
 
