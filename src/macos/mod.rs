@@ -4,8 +4,10 @@ use {
     crate::*,
     diskutil::*,
     snafu::prelude::*,
-    std::fs,
-    std::os::unix::fs::MetadataExt,
+    std::{
+        fs,
+        os::unix::fs::MetadataExt,
+    },
 };
 
 #[derive(Debug)]
