@@ -96,13 +96,14 @@ pub fn read_stats(mount_point: &Path) -> Result<Stats, StatsError> {
                 let favail = statvfs.f_favail;
                 let inodes = Inodes::new(files, ffree, favail);
 
+                #[allow(clippy::useless_conversion)]
                 Ok(Stats {
-                    bsize,
-                    blocks,
-                    bused,
-                    bfree,
-                    bavail,
-                    inodes,
+                    bsize: bsize.into(),
+                    blocks: blocks.into(),
+                    bused: bused.into(),
+                    bfree: bfree.into(),
+                    bavail: bavail.into(),
+                    inodes: inodes.into(),
                 })
             }
             _ => {
