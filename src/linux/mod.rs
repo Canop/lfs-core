@@ -94,7 +94,8 @@ pub fn read_stats(mount_point: &Path) -> Result<Stats, StatsError> {
                 let files = statvfs.f_files;
                 let ffree = statvfs.f_ffree;
                 let favail = statvfs.f_favail;
-                let inodes = Inodes::new(files, ffree, favail);
+                #[allow(clippy::useless_conversion)]
+                let inodes = Inodes::new(files.into(), ffree.into(), favail.into());
 
                 #[allow(clippy::useless_conversion)]
                 Ok(Stats {
