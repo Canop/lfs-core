@@ -53,9 +53,11 @@ impl FromStr for DeviceId {
 
 impl From<u64> for DeviceId {
     fn from(num: u64) -> Self {
+        // need to use libc, bit format is platform-dependent
+        let dev = num as libc::dev_t;
         Self {
-            major: ((num >> 8) % 65535) as u32,
-            minor: (num & 0xFF) as u32,
+            major: libc::major(dev) as u32,
+            minor: libc::minor(dev) as u32,
         }
     }
 }
