@@ -1,154 +1,129 @@
 mod diskutil_exec;
+mod diskutil_read;
 
 use {
-    super::DuDevice,
     crate::*,
-    diskutil_exec::*,
-    lazy_regex::*,
+    snafu::prelude::*,
+    std::{
+        fs,
+        os::unix::fs::MetadataExt,
+    },
 };
 
-pub fn mounted_du_devices() -> Result<Vec<DuDevice>, Error> {
-    let lines = du_lines(&["info", "-all"])?;
-    Ok(lines_to_devices(&lines))
+#[derive(Debug)]
+struct DuDevice {
+    id: String,                    // ex: "disk3s3s1"
+    node: String,                  // ex: "/dev/disk3s3s1"
+    file_system: Option<String>,   // ex: "APFS"
+    mount_point: Option<String>,   // ex: "/"
+    part_of_whole: Option<String>, // ex: "disk3"
+    protocol: Option<String>,
+    removable: Option<bool>,
+    read_only: Option<bool>,
+    solid_state: Option<bool>,
+    encrypted: Option<bool>,
+    volume_total_space: Option<u64>,
+    volume_used_space: Option<u64>,
+    volume_free_space: Option<u64>,
+    container_total_space: Option<u64>,
+    container_free_space: Option<u64>,
+    allocation_block_size: Option<u64>,
+    uuid: Option<String>,
+    part_uuid: Option<String>,
 }
 
-fn lines_to_devices(lines: &[String]) -> Vec<DuDevice> {
-    let mut devs = Vec::new();
-    let mut start = 0;
-    for (i, line) in lines.iter().enumerate() {
-        if regex_is_match!(r"\s*\*{8,}\s*$", line) {
-            if i > start + 3 {
-                let dev_lines = &lines[start..i];
-                if let Some(dev) = lines_to_device(dev_lines) {
-                    devs.push(dev);
-                } else {
-                    eprintln!("Device not understood:\n{}", dev_lines.join("\n"),);
-                }
-            }
-            start = i + 1;
-        }
+impl DuDevice {
+    pub fn stats(&self) -> Option<Stats> {
+        let bsize = self.allocation_block_size?;
+        let total = self.volume_total_space.or(self.container_total_space)?;
+        let blocks = total / bsize;
+        let bused = self.volume_used_space? / bsize;
+        let free = self.volume_free_space.or(self.container_free_space)?;
+        let bfree = free / bsize;
+        let bavail = bfree;
+        Some(Stats {
+            bsize,
+            blocks,
+            bused,
+            bfree,
+            bavail,
+            inodes: None, // TODO
+        })
     }
-    devs
 }
 
-fn lines_to_device(lines: &[String]) -> Option<DuDevice> {
-    let mut id = None;
-    let mut node = None;
-    let mut file_system = None;
-    let mut mount_point = None;
-    let mut part_of_whole = None;
-    let mut encrypted = None;
-    let mut read_only = None;
-    let mut removable = None;
-    let mut protocol = None;
-    let mut solid_state = None;
-    let mut volume_total_space = None;
-    let mut volume_free_space = None;
-    let mut volume_used_space = None;
-    let mut container_total_space = None;
-    let mut container_free_space = None;
-    let mut allocation_block_size = None;
-    let mut uuid = None;
-    let mut part_uuid = None;
-    for line in lines {
-        let Some((_, key, value)) = regex_captures!(r"^\s+([^\:]+):\s+(.+)$", &line) else {
+/// Get the device id from the BSD device node
+///
+/// eg /dev/disk3s4 -> 1:13
+fn query_device_id(device_node: &str) -> Result<DeviceId, Error> {
+    let stat =
+        fs::metadata(device_node).with_context(|_| CantReadFileSnafu { path: device_node })?;
+    let rdev = stat.rdev();
+    let device_id = DeviceId::from(rdev);
+    Ok(device_id)
+}
+
+/// Read all the mount points and load basic information on them
+pub fn read_mounts(_options: &ReadOptions) -> Result<Vec<Mount>, Error> {
+    let devs = diskutil_read::mounted_du_devices()?;
+    let mut mounts = Vec::new();
+    for dev in devs {
+        let stats = dev.stats().ok_or(StatsError::Unreachable);
+        let DuDevice {
+            id,
+            node,
+            file_system,
+            part_of_whole,
+            read_only,
+            encrypted,
+            protocol,
+            mount_point,
+            removable,
+            solid_state,
+            uuid,
+            part_uuid,
+            ..
+        } = dev;
+        let Some(mount_point) = mount_point else {
             continue;
         };
-        match key {
-            "Device Identifier" => {
-                id = Some(value.to_string());
-            }
-            "Device Node" => {
-                node = Some(value.to_string());
-            }
-            "File System" | "File System Personality" => {
-                if value != "None" {
-                    file_system = Some(value.to_string());
-                }
-            }
-            "Mount Point" => {
-                mount_point = Some(value.to_string());
-            }
-            "Part of Whole" => {
-                part_of_whole = Some(value.to_string());
-            }
-            "Protocol" => {
-                protocol = Some(value.to_string());
-            }
-            "Encrypted" => {
-                encrypted = extract_bool(value);
-            }
-            "Media Read-Only" => {
-                read_only = extract_bool(value);
-            }
-            "Removable Media" => match value {
-                "Removable" => {
-                    removable = Some(true);
-                }
-                "Fixed" => {
-                    removable = Some(false);
-                }
-                _ => {}
-            },
-            "Solid State" => {
-                solid_state = extract_bool(value);
-            }
-            "Volume Total Space" => {
-                volume_total_space = extract_bytes(value);
-            }
-            "Volume Free Space" => {
-                volume_free_space = extract_bytes(value);
-            }
-            "Volume Used Space" => {
-                volume_used_space = extract_bytes(value);
-            }
-            "Container Total Space" => {
-                container_total_space = extract_bytes(value);
-            }
-            "Container Free Space" => {
-                container_free_space = extract_bytes(value);
-            }
-            "Allocation Block Size" => {
-                allocation_block_size = extract_bytes(value);
-            }
-            "Volume UUID" => {
-                uuid = Some(value.to_string());
-            }
-            "Disk / Partition UUID" => {
-                part_uuid = Some(value.to_string());
-            }
-            _ => {}
+        let Some(file_system) = file_system else {
+            continue;
+        };
+        let image = matches!(protocol.as_deref(), Some("Disk Image"));
+        let disk = Disk {
+            name: part_of_whole.as_ref().unwrap_or(&id).to_string(),
+            rotational: solid_state.map(|s| !s),
+            removable,
+            image,
+            read_only,
+            ram: false,
+            lvm: false,
+            crypted: encrypted.unwrap_or(false),
+        };
+        let dev = query_device_id(&node)?;
+        let mut info = MountInfo {
+            id: None,
+            parent: None,
+            dev,
+            root: mount_point.clone().into(), // unsure
+            mount_point: mount_point.into(),
+            fs: node,
+            fs_type: file_system,
+            bound: false, // FIXME unsure (as for root)
+        };
+        if let Some(shortened) = info.fs_type.strip_prefix("MS-DOS ") {
+            info.fs_type = shortened.to_string();
         }
+        let mount = Mount {
+            info,
+            fs_label: None, // TODO
+            disk: Some(disk),
+            stats,
+            uuid,
+            part_uuid,
+        };
+        mounts.push(mount);
     }
-    Some(DuDevice {
-        id: id?,
-        node: node?,
-        file_system,
-        mount_point,
-        part_of_whole,
-        removable,
-        protocol,
-        solid_state,
-        read_only,
-        encrypted,
-        volume_total_space,
-        volume_free_space,
-        volume_used_space,
-        container_total_space,
-        container_free_space,
-        allocation_block_size,
-        uuid,
-        part_uuid,
-    })
-}
-
-fn extract_bytes(s: &str) -> Option<u64> {
-    let (_, num) = regex_captures!(r"(\d+)\sBytes", s)?;
-    num.parse().ok()
-}
-fn extract_bool(value: &str) -> Option<bool> {
-    regex_switch!(value,
-        r"^Yes\b" => true,
-        r"^No\b" => false,
-    )
+    Ok(mounts)
 }

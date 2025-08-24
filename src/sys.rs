@@ -11,6 +11,7 @@ use {
 };
 
 /// read a system file into a string
+#[allow(dead_code)]
 pub fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
     let mut file = File::open(path.as_ref())?;
     let mut buf = String::new();

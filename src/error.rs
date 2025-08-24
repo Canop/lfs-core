@@ -25,4 +25,13 @@ pub enum Error {
 
     #[snafu(display("Error parsing device id"))]
     ParseDeviceId,
+
+    #[snafu(display("Failed to call service {service:?}"))]
+    ServiceCallFailed { service: &'static str },
+
+    #[snafu(display("Failed to read {key:?}"))]
+    MissingValue { key: &'static str },
+
+    #[snafu(display("Device layer not found"))]
+    DeviceLayerNotFound,
 }
