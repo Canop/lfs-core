@@ -61,7 +61,7 @@ pub struct ParseMountInfoError {
 }
 
 #[cfg(target_os = "linux")]
-impl FromStr for MountInfo {
+impl std::str::FromStr for MountInfo {
     type Err = ParseMountInfoError;
     fn from_str(line: &str) -> Result<Self, Self::Err> {
         (|| {
