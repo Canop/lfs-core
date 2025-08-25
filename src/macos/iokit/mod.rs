@@ -187,7 +187,6 @@ fn get_all_dev_mount_infos() -> Vec<DevMountInfo> {
         if actual_count <= 0 {
             return Vec::new();
         }
-
         buf.set_len(actual_count as usize);
 
         buf.into_iter()
@@ -209,7 +208,21 @@ fn get_all_dev_mount_infos() -> Vec<DevMountInfo> {
                     bused: stat.f_blocks - stat.f_bavail,
                     inodes: None,
                 };
-
+                let fs_type = match fs_type {
+                    "apfs" => "APFS",
+                    "exfat" => "ExFAT",
+                    "ftp" => "FTP",
+                    "hfs" => "HFS+",
+                    "msdos" if stats.bsize * stats.blocks > 2_147_484_648 => "FAT32",
+                    "msdos" => "FAT", // TODO read boot sector to determine ?
+                    "nfs" => "NFS",
+                    "ntfs" => "NTFS",
+                    "udf" => "UDF",
+                    "ufs" => "UFS",
+                    "xfs" => "XHS",
+                    "zfs" => "ZFS",
+                    v => v, // other ones unchanged
+                };
                 Some(DevMountInfo {
                     device: device.to_string(),
                     mount_point: mount_point.to_string(),
