@@ -3,10 +3,16 @@ mod properties;
 use {
     crate::*,
     io_kit_sys::{
+        IOIteratorNext,
+        IOObjectRelease,
+        IORegistryEntryGetParentEntry,
+        IOServiceGetMatchingServices,
+        IOServiceMatching,
+        kIOMasterPortDefault,
         keys::kIOServicePlane,
         types::*,
-        *,
     },
+    lazy_regex::*,
     libc::*,
     properties::Properties,
     std::{
@@ -15,10 +21,11 @@ use {
     },
 };
 
+/// Data coming from IOKit and related to a mounted device
 #[derive(Debug)]
 pub struct Device {
-    id: String,   // ex: "disk3s3s1"
-    node: String, // ex: "/dev/disk3s3s1"
+    id: String,   // eg "disk3s3s1"
+    node: String, // eg "/dev/disk3s3s1"
     bsd_major: u32,
     bsd_minor: u32,
     removable: Option<bool>,
@@ -27,6 +34,7 @@ pub struct Device {
     rotational: Option<bool>,
     uuid: Option<String>,
     part_uuid: Option<String>,
+    content: Option<String>, // eg "Windows_FAT_16"
 }
 
 #[derive(Debug)]
@@ -47,6 +55,14 @@ pub fn read_mounts(_options: &ReadOptions) -> Result<Vec<Mount>, Error> {
             continue;
         };
         let mount_point = PathBuf::from(&dmi.mount_point);
+        let mut fs_type = dmi.fs_type.clone();
+        if fs_type == "FAT" {
+            if let Some(content) = dev.content.as_ref() {
+                if let Some((_, v)) = regex_captures!(r"^\w+_FAT_(\d\d)$", content) {
+                    fs_type = format!("FAT{v}");
+                }
+            }
+        }
         let info = MountInfo {
             id: None,
             parent: None,
@@ -57,7 +73,7 @@ pub fn read_mounts(_options: &ReadOptions) -> Result<Vec<Mount>, Error> {
             root: mount_point.clone(),
             mount_point,
             fs: dev.node.clone(),
-            fs_type: dmi.fs_type.clone(),
+            fs_type,
             bound: false, // FIXME
         };
         let disk = Disk {
@@ -155,6 +171,7 @@ fn props_to_device(
 
     let uuid = media_props.get_string("UUID");
     let part_uuid = None; // TODO
+    let content = media_props.get_string("Content");
 
     Ok(Device {
         id,
@@ -167,6 +184,7 @@ fn props_to_device(
         read_only,
         uuid,
         part_uuid,
+        content,
     })
 }
 
@@ -214,7 +232,7 @@ fn get_all_dev_mount_infos() -> Vec<DevMountInfo> {
                     "ftp" => "FTP",
                     "hfs" => "HFS+",
                     "msdos" if stats.bsize * stats.blocks > 2_147_484_648 => "FAT32",
-                    "msdos" => "FAT", // TODO read boot sector to determine ?
+                    "msdos" => "FAT", // will be detemined using device.content
                     "nfs" => "NFS",
                     "ntfs" => "NTFS",
                     "udf" => "UDF",
