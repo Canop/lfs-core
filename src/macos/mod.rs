@@ -3,7 +3,7 @@ mod iokit;
 
 use crate::*;
 
-/// Read all the mount points and load basic information on them
+/// Read all the mount points and load information on them
 pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
     match options.strategy {
         Some(Strategy::Iokit) => {

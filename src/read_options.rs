@@ -12,8 +12,8 @@ pub enum Strategy {
 
 #[derive(Debug, Clone, Copy)]
 pub struct ReadOptions {
-    pub remote_stats: bool,
-    pub strategy: Option<Strategy>,
+    pub(crate) remote_stats: bool,
+    pub(crate) strategy: Option<Strategy>,
 }
 impl Default for ReadOptions {
     fn default() -> Self {

@@ -1,11 +1,11 @@
+#[cfg(target_os = "linux")]
 use {
     super::*,
     snafu::prelude::*,
     std::fs,
 };
 
-/// the labelling of a file-system, that
-/// is the pair (label, fs)
+/// the labelling of a file-system, that is the pair (label, fs)
 #[derive(Debug, Clone)]
 pub struct Labelling {
     pub label: String,
@@ -29,6 +29,7 @@ pub fn get_label(
 ///
 /// An error can't be excluded as not all systems expose
 /// this information the way lfs-core reads it.
+#[cfg(target_os = "linux")]
 pub fn read_by(by_kind: &str) -> Result<Vec<Labelling>, Error> {
     let path = format!("/dev/disk/by-{by_kind}");
     let entries = fs::read_dir(&path).context(CantReadDirSnafu { path })?;

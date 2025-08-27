@@ -10,10 +10,18 @@ use {
         IOServiceMatching,
         kIOMasterPortDefault,
         keys::kIOServicePlane,
-        types::*,
+        types::{
+            io_iterator_t,
+            io_object_t,
+        },
     },
     lazy_regex::*,
-    libc::*,
+    libc::{
+        KERN_SUCCESS,
+        MNT_NOWAIT,
+        getfsstat,
+        statfs,
+    },
     properties::Properties,
     std::{
         os::raw::c_char,
@@ -45,7 +53,7 @@ struct DevMountInfo {
     stats: Stats,
 }
 
-/// Read all the mount points and load basic information on them
+/// Read all the mount points and load information on them
 pub fn read_mounts(_options: &ReadOptions) -> Result<Vec<Mount>, Error> {
     let devs = mounted_devices()?;
     let dmis = get_all_dev_mount_infos();

@@ -1,5 +1,4 @@
 use {
-    lazy_regex::*,
     std::{
         fs::File,
         io::{
@@ -30,7 +29,9 @@ pub fn read_file_as_bool<P: AsRef<Path>>(path: P) -> Option<bool> {
 }
 
 /// decode ascii-octal or ascii-hexa encoded strings
+#[cfg(target_os = "linux")]
 pub fn decode_string<S: AsRef<str>>(s: S) -> String {
+    use lazy_regex::*;
     // replacing octal escape sequences
     let s = regex_replace_all!(r#"\\0(\d\d)"#, s.as_ref(), |_, n: &str| {
         let c = u8::from_str_radix(n, 8).unwrap() as char;

@@ -2,7 +2,10 @@ use {
     crate::Error,
     core_foundation::{
         base::*,
-        boolean::*,
+        boolean::{
+            CFBoolean,
+            CFBooleanGetTypeID,
+        },
         dictionary::{
             CFDictionary,
             CFDictionaryGetValue,
@@ -11,16 +14,17 @@ use {
         },
         number::{
             CFNumber,
-            *,
+            CFNumberGetTypeID,
         },
         string::{
             CFString,
-            *,
+            CFStringGetTypeID,
+            CFStringRef,
         },
     },
     io_kit_sys::{
+        IORegistryEntryCreateCFProperties,
         types::*,
-        *,
     },
     libc::KERN_SUCCESS,
     std::{
