@@ -130,6 +130,7 @@ pub fn read_mountinfo() -> Result<Vec<MountInfo>, Error> {
 #[cfg(target_os = "linux")]
 #[test]
 fn test_from_str() {
+    use std::str::FromStr;
     let mi = MountInfo::from_str(
         "47 21 0:41 / /dev/hugepages rw,relatime shared:27 - hugetlbfs hugetlbfs rw,pagesize=2M",
     )
