@@ -2,10 +2,7 @@ use {
     crate::*,
     lazy_regex::*,
     snafu::prelude::*,
-    std::{
-        path::PathBuf,
-        str::FromStr,
-    },
+    std::path::PathBuf,
 };
 
 static REMOTE_ONLY_FS_TYPES: &[&str] = &[
@@ -63,7 +60,8 @@ pub struct ParseMountInfoError {
     line: String,
 }
 
-impl FromStr for MountInfo {
+#[cfg(target_os = "linux")]
+impl std::str::FromStr for MountInfo {
     type Err = ParseMountInfoError;
     fn from_str(line: &str) -> Result<Self, Self::Err> {
         (|| {
@@ -108,11 +106,13 @@ impl FromStr for MountInfo {
 /// chars.
 /// This is necessary because some chars are encoded. For example
 /// the `/media/dys/USB DISK` is present as `/media/dys/USB\040DISK`
+#[cfg(target_os = "linux")]
 fn str_to_pathbuf(s: &str) -> PathBuf {
     PathBuf::from(sys::decode_string(s))
 }
 
 /// read all the mount points
+#[cfg(target_os = "linux")]
 pub fn read_mountinfo() -> Result<Vec<MountInfo>, Error> {
     let mut mounts: Vec<MountInfo> = Vec::new();
     let path = "/proc/self/mountinfo";

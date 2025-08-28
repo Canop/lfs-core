@@ -38,21 +38,3 @@ impl Mount {
         matches!(self.stats, Err(StatsError::Unreachable))
     }
 }
-
-#[derive(Debug, Clone)]
-pub struct ReadOptions {
-    pub(crate) remote_stats: bool,
-}
-impl Default for ReadOptions {
-    fn default() -> Self {
-        Self { remote_stats: true }
-    }
-}
-impl ReadOptions {
-    pub fn remote_stats(
-        &mut self,
-        v: bool,
-    ) {
-        self.remote_stats = v;
-    }
-}

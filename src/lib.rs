@@ -14,7 +14,7 @@ for mount in mounts {
 }
 ```
 
-The [lfs](https://github.com/Canop/lfs) application is a viewer for lfs-core and shows you the information you're expected to find in mounts.
+The [dysk](https://github.com/Canop/dysk) application is a viewer for lfs-core and shows you the information you're expected to find in mounts.
 
 */
 
@@ -29,6 +29,7 @@ mod linux;
 mod macos;
 mod mount;
 mod mountinfo;
+mod read_options;
 mod stats;
 mod sys;
 
@@ -40,6 +41,7 @@ pub use {
     label::*,
     mount::*,
     mountinfo::*,
+    read_options::*,
     stats::*,
 };
 
