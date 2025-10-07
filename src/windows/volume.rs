@@ -100,8 +100,7 @@ impl fmt::Debug for VolumeName {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        let end = self.full_path.len().saturating_sub(1);
-        let s = String::from_utf16_lossy(&self.full_path[..end]);
+        let s = String::from_utf16_lossy(&self.full_path[..self.full_path.wcslen()]);
         f.debug_tuple("VolumeName").field(&s).finish()
     }
 }
