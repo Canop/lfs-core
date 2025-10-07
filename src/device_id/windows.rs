@@ -10,7 +10,7 @@ use {
     },
 };
 
-/// Id of a valume, can be found using GetVolumeInformationW
+/// Id of a volume, can be found using GetVolumeInformationW
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DeviceId {
     pub serial: u32,
