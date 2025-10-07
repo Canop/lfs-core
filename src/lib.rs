@@ -51,5 +51,7 @@ pub use {
 pub use linux::read_mounts;
 #[cfg(target_os = "macos")]
 pub use macos::read_mounts;
-#[cfg(target_os = "windows")]
+#[cfg(windows)]
 pub use windows::read_mounts;
+#[cfg(windows)]
+pub use windows::volume_serial_for_path;
