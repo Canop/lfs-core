@@ -198,7 +198,7 @@ impl Volume {
 
         let disk = self.disk_info();
 
-        let stats = if !options.remote_stats && disk.as_ref().map_or(false, |disk| disk.remote) {
+        let stats = if !options.remote_stats && disk.as_ref().is_some_and(|disk| disk.remote) {
             Err(StatsError::Excluded)
         } else {
             self.volume_stats()

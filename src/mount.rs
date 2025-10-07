@@ -47,6 +47,6 @@ impl Mount {
 
     #[cfg(windows)]
     pub fn is_remote(&self) -> bool {
-        self.disk.as_ref().map_or(false, |disk| disk.remote)
+        self.disk.as_ref().is_some_and(|disk| disk.remote)
     }
 }
