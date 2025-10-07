@@ -37,9 +37,7 @@ impl Mount {
     pub fn is_unreachable(&self) -> bool {
         matches!(self.stats, Err(StatsError::Unreachable))
     }
-    /// tell whether the mount looks remote
-    ///
-    /// Heuristics copied from https://github.com/coreutils/gnulib/blob/master/lib/mountlist.c
+
     #[cfg(unix)]
     pub fn is_remote(&self) -> bool {
         self.info.is_remote()
