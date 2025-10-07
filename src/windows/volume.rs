@@ -18,6 +18,7 @@ use {
         fmt,
         os::windows::ffi::OsStringExt,
         path::PathBuf,
+        ptr,
     },
     windows::{
         Win32::{
@@ -483,9 +484,9 @@ fn is_disk_rotational(disk_number: u32) -> Option<bool> {
         DeviceIoControl(
             handle,
             IOCTL_STORAGE_QUERY_PROPERTY,
-            Some(&query as *const _ as *const _),
+            Some(ptr::addr_of!(query).cast()),
             std::mem::size_of::<STORAGE_PROPERTY_QUERY>() as u32,
-            Some(&mut seek_penalty as *mut _ as *mut _),
+            Some(ptr::addr_of_mut!(seek_penalty).cast()),
             std::mem::size_of::<DEVICE_SEEK_PENALTY_DESCRIPTOR>() as u32,
             Some(&mut bytes_returned),
             None,
