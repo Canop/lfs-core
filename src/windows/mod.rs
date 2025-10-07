@@ -8,10 +8,10 @@ use crate::{
 };
 
 /// Read all the mount points and load basic information on them
-pub fn read_mounts(_options: &ReadOptions) -> Result<Vec<Mount>, Error> {
+pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
     Ok(get_volumes()?
         .into_iter()
-        .flat_map(|volume| volume.to_dysk_mounts().ok())
+        .flat_map(|volume| volume.to_dysk_mounts(options).ok())
         .flatten()
         .collect())
 }

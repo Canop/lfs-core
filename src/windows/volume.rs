@@ -4,6 +4,7 @@ use {
         Disk,
         Mount,
         MountInfo,
+        ReadOptions,
         Stats,
         StatsError,
         WindowsApiSnafu,
@@ -185,7 +186,10 @@ impl Volume {
         Self { name }
     }
 
-    pub fn to_dysk_mounts(&self) -> Result<Vec<Mount>, crate::Error> {
+    pub fn to_dysk_mounts(
+        &self,
+        options: &ReadOptions,
+    ) -> Result<Vec<Mount>, crate::Error> {
         let mounts = self.mount_points()?;
 
         if mounts.is_empty() {
@@ -194,7 +198,11 @@ impl Volume {
 
         let disk = self.disk_info();
 
-        let stats = self.volume_stats();
+        let stats = if !options.remote_stats && disk.as_ref().map_or(false, |disk| disk.remote) {
+            Err(StatsError::Excluded)
+        } else {
+            self.volume_stats()
+        };
 
         let VolumeInformation {
             serial_number,
