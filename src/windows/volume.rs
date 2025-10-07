@@ -4,6 +4,8 @@ use {
         Disk,
         Mount,
         MountInfo,
+        Stats,
+        StatsError,
         WindowsApiSnafu,
     },
     snafu::{
@@ -31,6 +33,7 @@ use {
                 FindFirstVolumeW,
                 FindNextVolumeW,
                 FindVolumeClose,
+                GetDiskFreeSpaceExW,
                 GetDriveTypeW,
                 GetVolumeInformationW,
                 GetVolumePathNamesForVolumeNameW,
@@ -191,6 +194,8 @@ impl Volume {
 
         let disk = self.disk_info();
 
+        let stats = self.volume_stats();
+
         let VolumeInformation {
             serial_number,
             label,
@@ -216,7 +221,7 @@ impl Volume {
                     info,
                     fs_label: Some(label.clone()),
                     disk: disk.clone(),
-                    stats: Err(crate::StatsError::Excluded),
+                    stats: stats.clone(),
                     uuid: self.name.to_uuid(),
                     part_uuid: None,
                 }
@@ -376,6 +381,28 @@ impl Volume {
             Err(error) if error.code() == ERROR_MORE_DATA.to_hresult() => VolumeKind::Logical,
             Err(_) => VolumeKind::Unknown,
         }
+    }
+
+    fn volume_stats(&self) -> Result<Stats, StatsError> {
+        let mut free_bytes_available: u64 = 0;
+        let mut total_bytes: u64 = 0;
+        let mut total_free_bytes: u64 = 0;
+
+        unsafe {
+            GetDiskFreeSpaceExW(
+                self.name.as_pcwstr(),
+                Some(&mut free_bytes_available as *mut u64 as *mut _),
+                Some(&mut total_bytes as *mut u64 as *mut _),
+                Some(&mut total_free_bytes as *mut u64 as *mut _),
+            )
+            .map_err(|_| StatsError::Unreachable)?;
+        }
+
+        Ok(Stats {
+            size: total_bytes,
+            free: free_bytes_available,
+            inodes: None,
+        })
     }
 }
 
