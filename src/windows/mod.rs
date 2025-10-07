@@ -1,23 +1,22 @@
 mod volume;
 
-use ::snafu::prelude::*;
-
-use std::{
-    os::windows::ffi::OsStrExt,
-    path::Path,
-};
-
-use windows::{
-    Win32::Storage::FileSystem::GetVolumeInformationW,
-    core::PCWSTR,
-};
-
-use crate::{
-    Error,
-    Mount,
-    ReadOptions,
-    WindowsApiSnafu,
-    windows::volume::get_volumes,
+use {
+    crate::{
+        Error,
+        Mount,
+        ReadOptions,
+        WindowsApiSnafu,
+        windows::volume::get_volumes,
+    },
+    ::snafu::prelude::*,
+    std::{
+        os::windows::ffi::OsStrExt,
+        path::Path,
+    },
+    windows::{
+        Win32::Storage::FileSystem::GetVolumeInformationW,
+        core::PCWSTR,
+    },
 };
 
 /// Read all the mount points and load basic information on them
