@@ -4,7 +4,7 @@ use {
     std::path::PathBuf,
 };
 
-#[cfg(target_family = "unix")]
+#[cfg(unix)]
 static REMOTE_ONLY_FS_TYPES: &[&str] = &[
     "afs",
     "coda",
@@ -70,7 +70,7 @@ impl MountInfo {
     /// tell whether the mount looks remote
     ///
     /// Heuristics copied from https://github.com/coreutils/gnulib/blob/master/lib/mountlist.c
-    #[cfg(target_family = "unix")]
+    #[cfg(unix)]
     pub fn is_remote(&self) -> bool {
         self.fs.contains(':')
             || (self.fs.starts_with("//")

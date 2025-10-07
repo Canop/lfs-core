@@ -1,9 +1,9 @@
-#[cfg(target_family = "unix")]
+#[cfg(unix)]
 mod unix;
 #[cfg(windows)]
 mod windows;
 
-#[cfg(target_family = "unix")]
+#[cfg(unix)]
 pub use unix::*;
 #[cfg(windows)]
 pub use windows::*;

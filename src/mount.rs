@@ -40,7 +40,7 @@ impl Mount {
     /// tell whether the mount looks remote
     ///
     /// Heuristics copied from https://github.com/coreutils/gnulib/blob/master/lib/mountlist.c
-    #[cfg(target_family = "unix")]
+    #[cfg(unix)]
     pub fn is_remote(&self) -> bool {
         self.info.is_remote()
     }

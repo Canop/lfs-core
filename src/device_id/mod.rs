@@ -1,13 +1,13 @@
 use snafu::prelude::*;
 
-#[cfg(target_family = "unix")]
+#[cfg(unix)]
 mod unix;
-#[cfg(target_os = "windows")]
+#[cfg(windows)]
 mod windows;
 
-#[cfg(target_family = "unix")]
+#[cfg(unix)]
 pub use unix::DeviceId;
-#[cfg(target_os = "windows")]
+#[cfg(windows)]
 pub use windows::DeviceId;
 
 #[derive(Debug, Snafu)]

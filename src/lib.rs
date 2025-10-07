@@ -32,7 +32,7 @@ mod mountinfo;
 mod read_options;
 mod stats;
 mod sys;
-#[cfg(target_os = "windows")]
+#[cfg(windows)]
 mod windows;
 
 pub use {
