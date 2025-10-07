@@ -400,9 +400,9 @@ impl Volume {
         unsafe {
             GetDiskFreeSpaceExW(
                 self.name.as_pcwstr(),
-                Some(&mut free_bytes_available as *mut u64 as *mut _),
-                Some(&mut total_bytes as *mut u64 as *mut _),
-                Some(&mut total_free_bytes as *mut u64 as *mut _),
+                Some(ptr::addr_of_mut!(free_bytes_available).cast()),
+                Some(ptr::addr_of_mut!(total_bytes).cast()),
+                Some(ptr::addr_of_mut!(total_free_bytes).cast()),
             )
             .map_err(|_| StatsError::Unreachable)?;
         }
