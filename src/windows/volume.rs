@@ -1,6 +1,7 @@
 use {
     crate::{
         DeviceId,
+        Disk,
         Mount,
         MountInfo,
         WindowsApiSnafu,
@@ -18,22 +19,55 @@ use {
     windows::{
         Win32::{
             Foundation::{
+                CloseHandle,
                 ERROR_MORE_DATA,
                 HANDLE,
                 MAX_PATH,
             },
             Storage::FileSystem::{
+                CreateFileW,
+                FILE_SHARE_READ,
+                FILE_SHARE_WRITE,
                 FindFirstVolumeW,
                 FindNextVolumeW,
                 FindVolumeClose,
+                GetDriveTypeW,
                 GetVolumeInformationW,
                 GetVolumePathNamesForVolumeNameW,
+                IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
+                OPEN_EXISTING,
             },
-            System::SystemServices::FILE_READ_ONLY_VOLUME,
+            System::{
+                IO::DeviceIoControl,
+                Ioctl::{
+                    DEVICE_SEEK_PENALTY_DESCRIPTOR,
+                    DISK_EXTENT,
+                    IOCTL_STORAGE_QUERY_PROPERTY,
+                    PropertyStandardQuery,
+                    STORAGE_PROPERTY_QUERY,
+                    StorageDeviceSeekPenaltyProperty,
+                    VOLUME_DISK_EXTENTS,
+                },
+                SystemServices::FILE_READ_ONLY_VOLUME,
+                WindowsProgramming::{
+                    DRIVE_CDROM,
+                    DRIVE_FIXED,
+                    DRIVE_RAMDISK,
+                    DRIVE_REMOTE,
+                    DRIVE_REMOVABLE,
+                },
+            },
         },
         core::PCWSTR,
     },
 };
+
+#[derive(Debug, Clone)]
+pub enum VolumeKind {
+    Simple { disk_number: u32 },
+    Logical,
+    Unknown,
+}
 
 trait WideStringExt {
     fn wcslen(&self) -> usize;
@@ -67,9 +101,11 @@ impl fmt::Debug for VolumeName {
     }
 }
 
-
 impl fmt::Display for VolumeName {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter,
+    ) -> fmt::Result {
         let s = String::from_utf16_lossy(&self.full_path[..self.full_path.wcslen()]);
         write!(f, "{}", s)
     }
@@ -153,6 +189,8 @@ impl Volume {
             return Ok(Vec::new());
         }
 
+        let disk = self.disk_info();
+
         let VolumeInformation {
             serial_number,
             label,
@@ -177,7 +215,7 @@ impl Volume {
                 Mount {
                     info,
                     fs_label: Some(label.clone()),
-                    disk: None,
+                    disk: disk.clone(),
                     stats: Err(crate::StatsError::Excluded),
                     uuid: self.name.to_uuid(),
                     part_uuid: None,
@@ -250,6 +288,95 @@ impl Volume {
             ),
         })
     }
+
+    fn disk_info(&self) -> Option<Disk> {
+        let volume_kind = self.volume_kind();
+
+        let drive_type = unsafe { GetDriveTypeW(self.name.as_pcwstr()) };
+
+        let (removable, remote, ram) = match drive_type {
+            DRIVE_REMOVABLE => (Some(true), false, false),
+            DRIVE_FIXED => (Some(false), false, false),
+            DRIVE_REMOTE => (Some(false), true, false),
+            DRIVE_CDROM => (Some(true), false, false),
+            DRIVE_RAMDISK => (Some(false), false, true),
+            _ => return None,
+        };
+
+        let rotational = if let VolumeKind::Simple { disk_number } = volume_kind {
+            is_disk_rotational(disk_number)
+        } else {
+            None
+        };
+
+        Some(Disk {
+            rotational,
+            removable,
+            read_only: self.volume_information().map(|info| info.read_only).ok(),
+            ram,
+            image: false,
+            lvm: matches!(volume_kind, VolumeKind::Logical),
+            crypted: false,
+            remote,
+        })
+    }
+
+    fn volume_kind(&self) -> VolumeKind {
+        let handle = match unsafe {
+            CreateFileW(
+                self.name.as_pcwstr_no_trailing_backslash(),
+                0,
+                FILE_SHARE_READ | FILE_SHARE_WRITE,
+                None,
+                OPEN_EXISTING,
+                Default::default(),
+                None,
+            )
+        } {
+            Ok(handle) => handle,
+            Err(_) => return VolumeKind::Unknown,
+        };
+
+        let mut extents_buffer = VOLUME_DISK_EXTENTS {
+            NumberOfDiskExtents: 0,
+            Extents: [DISK_EXTENT {
+                DiskNumber: 0,
+                StartingOffset: 0,
+                ExtentLength: 0,
+            }],
+        };
+
+        let mut bytes_returned: u32 = 0;
+
+        let result = unsafe {
+            DeviceIoControl(
+                handle,
+                IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
+                None,
+                0,
+                Some(&mut extents_buffer as *mut _ as *mut _),
+                std::mem::size_of::<VOLUME_DISK_EXTENTS>() as u32,
+                Some(&mut bytes_returned),
+                None,
+            )
+        };
+
+        let _ = unsafe { CloseHandle(handle) };
+
+        match result {
+            Ok(_) => {
+                if extents_buffer.NumberOfDiskExtents == 1 {
+                    VolumeKind::Simple {
+                        disk_number: extents_buffer.Extents[0].DiskNumber,
+                    }
+                } else {
+                    VolumeKind::Logical
+                }
+            }
+            Err(error) if error.code() == ERROR_MORE_DATA.to_hresult() => VolumeKind::Logical,
+            Err(_) => VolumeKind::Unknown,
+        }
+    }
 }
 
 pub fn get_volumes() -> Result<Vec<Volume>, crate::Error> {
@@ -281,4 +408,59 @@ pub fn get_volumes() -> Result<Vec<Volume>, crate::Error> {
     };
 
     Ok(volume_names.into_iter().map(Volume::new).collect())
+}
+
+fn is_disk_rotational(disk_number: u32) -> Option<bool> {
+    let path: Vec<u16> = format!("\\\\.\\PhysicalDrive{}\0", disk_number)
+        .encode_utf16()
+        .collect();
+
+    let handle = match unsafe {
+        CreateFileW(
+            PCWSTR(path.as_ptr()),
+            0,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            None,
+            OPEN_EXISTING,
+            Default::default(),
+            None,
+        )
+    } {
+        Ok(handle) => handle,
+        Err(_) => return None,
+    };
+
+    let query = STORAGE_PROPERTY_QUERY {
+        PropertyId: StorageDeviceSeekPenaltyProperty,
+        QueryType: PropertyStandardQuery,
+        AdditionalParameters: [0; 1],
+    };
+
+    let mut seek_penalty = DEVICE_SEEK_PENALTY_DESCRIPTOR {
+        Version: 0,
+        Size: 0,
+        IncursSeekPenalty: false,
+    };
+
+    let mut bytes_returned = 0u32;
+
+    let result = unsafe {
+        DeviceIoControl(
+            handle,
+            IOCTL_STORAGE_QUERY_PROPERTY,
+            Some(&query as *const _ as *const _),
+            std::mem::size_of::<STORAGE_PROPERTY_QUERY>() as u32,
+            Some(&mut seek_penalty as *mut _ as *mut _),
+            std::mem::size_of::<DEVICE_SEEK_PENALTY_DESCRIPTOR>() as u32,
+            Some(&mut bytes_returned),
+            None,
+        )
+    };
+
+    let _ = unsafe { CloseHandle(handle) };
+
+    match result {
+        Ok(_) => Some(seek_penalty.IncursSeekPenalty),
+        _ => None,
+    }
 }
