@@ -18,7 +18,10 @@ pub enum Error {
     },
 
     #[snafu(display("Could not parse mountinfo"))]
-    ParseMountInfo { source: crate::ParseMountInfoError },
+    #[cfg(target_os = "linux")]
+    ParseMountInfo {
+        source: crate::linux::ParseMountInfoError,
+    },
 
     #[snafu(display("Unexpected format"))]
     UnexpectedFormat,

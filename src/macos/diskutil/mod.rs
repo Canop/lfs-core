@@ -108,6 +108,7 @@ pub fn read_mounts(_options: &ReadOptions) -> Result<Vec<Mount>, Error> {
             dev,
             root: mount_point.clone().into(), // unsure
             mount_point: mount_point.into(),
+            options: Default::default(),
             fs: node,
             fs_type: file_system,
             bound: false, // FIXME unsure (as for root)

@@ -1,4 +1,5 @@
 mod block_device;
+mod read_mountinfos;
 
 use {
     crate::*,
@@ -11,6 +12,8 @@ use {
         path::Path,
     },
 };
+
+pub use read_mountinfos::ParseMountInfoError;
 
 pub fn new_disk(name: String) -> Disk {
     let rotational = sys::read_file_as_bool(format!("/sys/block/{name}/queue/rotational"));
@@ -43,7 +46,7 @@ pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
     // disk whose name starts the one of our partition
     // hence the sorting.
     let bd_list = BlockDeviceList::read()?;
-    read_mountinfo()?
+    read_mountinfos::read_all_mountinfos()?
         .drain(..)
         .map(|info| {
             let top_bd = bd_list.find_top(info.dev, info.dm_name(), info.fs_name());

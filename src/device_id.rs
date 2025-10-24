@@ -6,7 +6,7 @@ use {
     },
 };
 
-/// Id of a device, as can be found in MetadataExt.dev().
+/// Id of a device, as can be found in `MetadataExt.dev()`
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DeviceId {
     pub major: u32,
@@ -55,9 +55,12 @@ impl From<u64> for DeviceId {
     fn from(num: u64) -> Self {
         // need to use libc, bit format is platform-dependent
         let dev = num as libc::dev_t;
-        Self {
-            major: libc::major(dev) as u32,
-            minor: libc::minor(dev) as u32,
+        unsafe {
+            // not really, looks like a pb with the
+            Self {
+                major: libc::major(dev) as u32,
+                minor: libc::minor(dev) as u32,
+            }
         }
     }
 }
