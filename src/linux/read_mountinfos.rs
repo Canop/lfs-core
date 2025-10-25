@@ -95,6 +95,7 @@ pub fn read_all_mountinfos() -> Result<Vec<MountInfo>, Error> {
 }
 
 #[cfg(target_os = "linux")]
+#[allow(clippy::bool_assert_comparison)]
 #[test]
 fn test_from_str() {
     use std::str::FromStr;
