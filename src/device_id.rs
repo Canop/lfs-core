@@ -6,7 +6,7 @@ use {
     },
 };
 
-/// Id of a device, as can be found in MetadataExt.dev().
+/// Id of a device, as can be found in `MetadataExt.dev()`
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DeviceId {
     pub major: u32,
@@ -75,4 +75,3 @@ impl DeviceId {
 fn test_from_str() {
     assert_eq!(DeviceId::new(8, 16), DeviceId::from_str("8:16").unwrap());
 }
-

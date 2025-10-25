@@ -80,6 +80,7 @@ pub fn read_mounts(_options: &ReadOptions) -> Result<Vec<Mount>, Error> {
             },
             root: mount_point.clone(),
             mount_point,
+            options: Default::default(),
             fs: dev.node.clone(),
             fs_type,
             bound: false, // FIXME
