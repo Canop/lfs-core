@@ -107,7 +107,7 @@ impl MountInfo {
         name: &str,
     ) -> Option<&str> {
         for option in &self.options {
-            if &option.name == name {
+            if option.name == name {
                 return option.value.as_deref();
             }
         }

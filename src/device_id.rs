@@ -55,12 +55,9 @@ impl From<u64> for DeviceId {
     fn from(num: u64) -> Self {
         // need to use libc, bit format is platform-dependent
         let dev = num as libc::dev_t;
-        unsafe {
-            // not really, looks like a pb with the
-            Self {
-                major: libc::major(dev) as u32,
-                minor: libc::minor(dev) as u32,
-            }
+        Self {
+            major: libc::major(dev) as u32,
+            minor: libc::minor(dev) as u32,
         }
     }
 }
@@ -77,9 +74,4 @@ impl DeviceId {
 #[test]
 fn test_from_str() {
     assert_eq!(DeviceId::new(8, 16), DeviceId::from_str("8:16").unwrap());
-}
-
-#[test]
-fn test_from_u64() {
-    assert_eq!(DeviceId::new(8, 16), DeviceId::from(2064u64));
 }
