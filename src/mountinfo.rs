@@ -15,6 +15,12 @@ static REMOTE_ONLY_FS_TYPES: &[&str] = &[
     "vxfs",
 ];
 
+/// options that may be present in the options vec but that we
+///  don't want to see in the `options_string()` returned value
+static OPTIONS_NOT_IN_OPTIONS_STRING: &[&str] = &[
+    "removable", // parsed on mac but not found in /proc/mountinfo
+];
+
 /// An id of a mount
 pub type MountId = u32;
 
@@ -72,10 +78,19 @@ impl MountInfo {
     }
     /// return a string like "rw,noatime,compress=zstd:3,space_cache=v2,subvolid=256"
     /// (as in /proc/mountinfo)
+    ///
+    /// Some options may be skipped as they're less relevant (but you may still find them
+    /// in the options vec)
     pub fn options_string(&self) -> String {
         let mut s = String::new();
         let mut first = true;
         for option in &self.options {
+            if OPTIONS_NOT_IN_OPTIONS_STRING
+                .iter()
+                .any(|s| s == &option.name)
+            {
+                continue;
+            }
             if !first {
                 s.push(',');
             }

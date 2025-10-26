@@ -51,6 +51,7 @@ struct DevMountInfo {
     mount_point: String,
     fs_type: String,
     stats: Stats,
+    options: Vec<MountOption>,
 }
 
 /// Read all the mount points and load information on them
@@ -80,7 +81,7 @@ pub fn read_mounts(_options: &ReadOptions) -> Result<Vec<Mount>, Error> {
             },
             root: mount_point.clone(),
             mount_point,
-            options: Default::default(),
+            options: dmi.options.clone(),
             fs: dev.node.clone(),
             fs_type,
             bound: false, // FIXME
@@ -250,11 +251,62 @@ fn get_all_dev_mount_infos() -> Vec<DevMountInfo> {
                     "zfs" => "ZFS",
                     v => v, // other ones unchanged
                 };
+                // we'll try to build a "mount options" array consistent with the semantics of linux
+                // Constants are defined in https://github.com/apple/darwin-xnu/blob/main/bsd/sys/mount.h
+                // I'm not sure how stable those flag values are
+                let flags: u32 = stat.f_flags;
+                let mut options = Vec::new();
+                if flags & 1 == 0 {
+                    // MNT_READ_ONLY = 1
+                    options.push(MountOption::new("rw", None));
+                }
+                if flags & 2 != 0 {
+                    // MNT_SYNCHRONOUS = 2
+                    options.push(MountOption::new("synchronous", None));
+                }
+                if flags & 4 != 0 {
+                    // MNT_NOEXEC = 4
+                    options.push(MountOption::new("noexec", None));
+                }
+                if flags & 8 != 0 {
+                    // MNT_NOSUID = 8
+                    options.push(MountOption::new("nosuid", None));
+                }
+                if flags & 16 != 0 {
+                    // MNT_NODEV = 16
+                    options.push(MountOption::new("nodev", None));
+                }
+                if flags & 32 != 0 {
+                    // MNT_UNION = 32
+                    options.push(MountOption::new("union", None));
+                }
+                if flags & 64 != 0 {
+                    // MNT_ASYNC = 64
+                    options.push(MountOption::new("async", None));
+                }
+                if flags & 128 != 0 {
+                    // MNT_CPROTECT = 128
+                    options.push(MountOption::new("cprotect", None));
+                }
+                if flags & 512 != 0 {
+                    // MNT_REMOVABLE = 512
+                    options.push(MountOption::new("removable", None));
+                }
+
+                // Following ones don't seem correct
+                // if flags & 0x00100000 != 0 { // MNT_DONTBROWSE  = 0x00100000
+                //     options.push(MountOption::new("dontbrowse", None));
+                // }
+                // if flags & 0x10000000 != 0 { // MNT_NOATIME = 0x10000000
+                //     options.push(MountOption::new("noatime", None));
+                // }
+
                 Some(DevMountInfo {
                     device: device.to_string(),
                     mount_point: mount_point.to_string(),
                     fs_type: fs_type.to_string(),
                     stats,
+                    options,
                 })
             })
             .collect()
