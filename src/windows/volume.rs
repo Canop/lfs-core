@@ -220,6 +220,7 @@ impl Volume {
                     dev: DeviceId::from(serial_number),
                     root: mount_point.clone(),
                     mount_point,
+                    options: Vec::new(),
                     fs: self.name.to_string(),
                     fs_type: file_system_name.clone(),
                     bound: false,
