@@ -33,8 +33,10 @@ impl std::str::FromStr for MountInfo {
             let root = str_to_pathbuf(tokens.next()?);
             let mount_point = str_to_pathbuf(tokens.next()?);
 
-            let options = regex_captures_iter!("(?:^|,)([^=,]+)(?:=([^=,]*))?", tokens.next()?,);
-            let options = options
+            let direct_options =
+                regex_captures_iter!("(?:^|,)([^=,]+)(?:=([^=,]*))?", tokens.next()?,);
+
+            let mut options: Vec<MountOption> = direct_options
                 .map(|c| {
                     let name = c.get(1).unwrap().as_str().to_string();
                     let value = c.get(2).map(|v| v.as_str().to_string());
@@ -53,6 +55,21 @@ impl std::str::FromStr for MountInfo {
 
             let fs_type = tokens.next()?.to_string();
             let fs = tokens.next()?.to_string();
+
+            if let Some(super_options) = tokens.next() {
+                for c in regex_captures_iter!("(?:^|,)([^=,]+)(?:=([^=,]*))?", super_options) {
+                    let name = c.get(1).unwrap().as_str().to_string();
+                    if name == "rw" {
+                        continue; // rw at super level is not relevant
+                    }
+                    if options.iter().any(|o| o.name == name) {
+                        continue;
+                    }
+                    let value = c.get(2).map(|v| v.as_str().to_string());
+                    options.push(MountOption { name, value });
+                }
+            }
+
             Some(Self {
                 id,
                 parent,
@@ -108,7 +125,7 @@ fn test_from_str() {
     assert_eq!(mi.dev, DeviceId::new(0, 41));
     assert_eq!(mi.root, PathBuf::from("/"));
     assert_eq!(mi.mount_point, PathBuf::from("/dev/hugepages"));
-    assert_eq!(mi.options_string(), "rw,relatime".to_string());
+    assert_eq!(mi.options_string(), "rw,relatime,pagesize=2M".to_string());
 
     let mi = MountInfo::from_str(
         "106 26 8:17 / /home/dys/dev rw,noatime,compress=zstd:3 shared:57 - btrfs /dev/sdb1 rw,attr2,inode64,noquota"
@@ -124,9 +141,22 @@ fn test_from_str() {
         options.next(),
         Some(MountOption::new("compress", Some("zstd:3")))
     );
-    assert_eq!(options.next(), None);
     assert_eq!(mi.has_option("noatime"), true);
     assert_eq!(mi.has_option("relatime"), false);
     assert_eq!(mi.option_value("thing"), None);
     assert_eq!(mi.option_value("compress"), Some("zstd:3"));
+    assert_eq!(
+        mi.options_string(),
+        "rw,noatime,compress=zstd:3,attr2,inode64,noquota".to_string()
+    );
+
+    let mi = MountInfo::from_str(
+        "73 2 0:33 /root / rw,relatime shared:1 - btrfs /dev/vda3 rw,seclabel,compress=zstd:1,ssd,space_cache=v2,subvolid=256,subvol=/root"
+    ).unwrap();
+    assert_eq!(mi.option_value("compress"), Some("zstd:1"));
+    assert_eq!(
+        mi.options_string(),
+        "rw,relatime,seclabel,compress=zstd:1,ssd,space_cache=v2,subvolid=256,subvol=/root"
+            .to_string()
+    );
 }
