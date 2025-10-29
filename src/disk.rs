@@ -2,6 +2,7 @@
 #[derive(Debug, Clone)]
 pub struct Disk {
     /// a name, like "sda", "sdc", "nvme0n1", etc.
+    #[cfg(not(windows))]
     pub name: String,
 
     /// true for HDD, false for SSD, None for unknown.
@@ -26,6 +27,10 @@ pub struct Disk {
 
     /// whether it's a crypted disk
     pub crypted: bool,
+
+    /// whether it's a remote disk
+    #[cfg(windows)]
+    pub remote: bool,
 }
 
 impl Disk {

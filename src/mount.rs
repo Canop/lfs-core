@@ -37,4 +37,14 @@ impl Mount {
     pub fn is_unreachable(&self) -> bool {
         matches!(self.stats, Err(StatsError::Unreachable))
     }
+
+    #[cfg(unix)]
+    pub fn is_remote(&self) -> bool {
+        self.info.is_remote()
+    }
+
+    #[cfg(windows)]
+    pub fn is_remote(&self) -> bool {
+        self.disk.as_ref().is_some_and(|disk| disk.remote)
+    }
 }

@@ -32,6 +32,8 @@ mod mountinfo;
 mod read_options;
 mod stats;
 mod sys;
+#[cfg(windows)]
+mod windows;
 
 pub use {
     device_id::*,
@@ -49,3 +51,7 @@ pub use {
 pub use linux::read_mounts;
 #[cfg(target_os = "macos")]
 pub use macos::read_mounts;
+#[cfg(windows)]
+pub use windows::read_mounts;
+#[cfg(windows)]
+pub use windows::volume_serial_for_path;

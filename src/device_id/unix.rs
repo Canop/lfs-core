@@ -1,4 +1,8 @@
 use {
+    super::{
+        ParseDeviceIdError,
+        ParseDeviceIdSnafu,
+    },
     snafu::prelude::*,
     std::{
         fmt,
@@ -11,12 +15,6 @@ use {
 pub struct DeviceId {
     pub major: u32,
     pub minor: u32,
-}
-
-#[derive(Debug, Snafu)]
-#[snafu(display("Could not parse {string} as a device id"))]
-pub struct ParseDeviceIdError {
-    string: String,
 }
 
 impl fmt::Display for DeviceId {

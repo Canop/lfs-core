@@ -37,4 +37,11 @@ pub enum Error {
 
     #[snafu(display("Device layer not found"))]
     DeviceLayerNotFound,
+
+    #[cfg(windows)]
+    #[snafu(display("Windows API call failed: {api}"))]
+    WindowsApiError {
+        source: windows::core::Error,
+        api: String,
+    },
 }
