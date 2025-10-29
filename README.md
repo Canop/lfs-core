@@ -13,7 +13,7 @@
 [l4]: https://miaou.dystroy.org/3
 
 
-Give information on the mounted disks in linux and Mac.
+Give information on the mounted disks in linux, Mac, and Windows (experimental).
 
 **lfs-core** provides the data of [dysk](https://github.com/Canop/dysk) and of the `:fs` screen of [broot](https://dystroy.org/broot).
 
