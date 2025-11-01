@@ -6,6 +6,7 @@ use {
     snafu::prelude::*,
     std::{
         fmt,
+        path::Path,
         str::FromStr,
     },
 };
@@ -60,6 +61,10 @@ impl From<u32> for DeviceId {
 impl DeviceId {
     pub fn new(serial: u32) -> Self {
         Self { serial }
+    }
+    pub fn of_path(path: &Path) -> Result<Self, crate::Error> {
+        let serial = crate::volume_serial_for_path(path)?;
+        Ok(Self { serial })
     }
 }
 

@@ -5,6 +5,12 @@ pub enum Error {
     #[snafu(display("Couldn't execute {exe}"))]
     CantExecute { source: std::io::Error, exe: String },
 
+    #[snafu(display("Could not read metadata of file {path:?}"))]
+    CantReadFileMetadata {
+        source: std::io::Error,
+        path: std::path::PathBuf,
+    },
+
     #[snafu(display("Could not read file {path:?}"))]
     CantReadFile {
         source: std::io::Error,
