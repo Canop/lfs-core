@@ -1,9 +1,9 @@
 use {
-    crate::Error,
     super::{
         ParseDeviceIdError,
         ParseDeviceIdSnafu,
     },
+    crate::Error,
     snafu::prelude::*,
     std::{
         fmt,
@@ -72,8 +72,10 @@ impl DeviceId {
         Self { major, minor }
     }
     pub fn of_path(path: &Path) -> Result<Self, Error> {
-        let md = fs::metadata(path)
-            .map_err(|e| Error::CantReadFileMetadata { source: e, path: path.to_path_buf() })?;
+        let md = fs::metadata(path).map_err(|e| Error::CantReadFileMetadata {
+            source: e,
+            path: path.to_path_buf(),
+        })?;
         let dev_num = md.dev();
         Ok(Self::from(dev_num))
     }

@@ -3,14 +3,24 @@ use {
         ParseDeviceIdError,
         ParseDeviceIdSnafu,
     },
+    crate::WindowsApiSnafu,
     snafu::prelude::*,
     std::{
+        ffi::OsStr,
         fmt,
+        os::windows::ffi::OsStrExt,
         path::Path,
         str::FromStr,
     },
+    windows::{
+        Win32::Storage::FileSystem::{
+            GetVolumeInformationW,
+            GetVolumeNameForVolumeMountPointW,
+            GetVolumePathNameW,
+        },
+        core::PCWSTR,
+    },
 };
-
 /// Id of a volume, can be found using GetVolumeInformationW
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DeviceId {
@@ -62,9 +72,48 @@ impl DeviceId {
     pub fn new(serial: u32) -> Self {
         Self { serial }
     }
+    /// Determine the DeviceId for a given file path
     pub fn of_path(path: &Path) -> Result<Self, crate::Error> {
-        let serial = crate::volume_serial_for_path(path)?;
-        Ok(Self { serial })
+        unsafe {
+            let path_wide: Vec<u16> = OsStr::new(path)
+                .encode_wide()
+                .chain(std::iter::once(0)) // null terminator
+                .collect();
+
+            // Step 1: Get the volume path from the file path
+            let mut volume_path_buf = vec![0u16; 260]; // MAX_PATH
+            GetVolumePathNameW(PCWSTR(path_wide.as_ptr()), &mut volume_path_buf).context(
+                WindowsApiSnafu {
+                    api: "GetVolumePathNameW",
+                },
+            )?;
+
+            // Step 2: Get the volume GUID from the volume path
+            let mut volume_guid_buf = vec![0u16; 260]; // MAX_PATH
+            GetVolumeNameForVolumeMountPointW(
+                PCWSTR(volume_path_buf.as_ptr()),
+                &mut volume_guid_buf,
+            )
+            .context(WindowsApiSnafu {
+                api: "GetVolumeNameForVolumeMountPointW",
+            })?;
+
+            // Step 3: Get serial number from the GUID
+            let mut serial: u32 = 0;
+            GetVolumeInformationW(
+                PCWSTR(volume_guid_buf.as_ptr()),
+                None,
+                Some(&mut serial),
+                None,
+                None,
+                None,
+            )
+            .context(WindowsApiSnafu {
+                api: "GetVolumeInformationW",
+            })?;
+
+            Ok(Self { serial })
+        }
     }
 }
 

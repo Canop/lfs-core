@@ -28,7 +28,9 @@ pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
         .collect())
 }
 
-/// Get a volume serial number for a provided path
+/// Get a volume serial number for a provided root path
+///
+/// Call <https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getvolumeinformationw>
 pub fn volume_serial_for_path(path: impl AsRef<Path>) -> Result<u32, crate::Error> {
     let path_wide: Vec<u16> = path
         .as_ref()
