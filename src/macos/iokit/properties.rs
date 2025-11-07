@@ -71,12 +71,6 @@ impl Properties {
     ) -> Result<u64, Error> {
         self.get_u64(key).ok_or(Error::MissingValue { key })
     }
-    pub fn get_mandatory_u32(
-        &self,
-        key: &'static str,
-    ) -> Result<u32, Error> {
-        self.get_u32(key).ok_or(Error::MissingValue { key })
-    }
     pub fn get_sub_string(
         &self,
         dict_key: &'static str,
@@ -124,12 +118,6 @@ impl Properties {
             })
             .and_then(|cf_value| cf_value.to_i64())
             .and_then(|v| v.try_into().ok())
-    }
-    pub fn get_u32(
-        &self,
-        key: &'static str,
-    ) -> Option<u32> {
-        self.get_u64(key).map(|cf_value| cf_value as u32)
     }
     pub fn get_bool(
         &self,
