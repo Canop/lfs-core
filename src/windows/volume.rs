@@ -8,6 +8,7 @@ use {
         Stats,
         StatsError,
         WindowsApiSnafu,
+        windows::volume::volume_utils::volume_kind_detect,
     },
     snafu::{
         ResultExt,
@@ -39,19 +40,16 @@ use {
                 GetDriveTypeW,
                 GetVolumeInformationW,
                 GetVolumePathNamesForVolumeNameW,
-                IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
                 OPEN_EXISTING,
             },
             System::{
                 IO::DeviceIoControl,
                 Ioctl::{
                     DEVICE_SEEK_PENALTY_DESCRIPTOR,
-                    DISK_EXTENT,
                     IOCTL_STORAGE_QUERY_PROPERTY,
                     PropertyStandardQuery,
                     STORAGE_PROPERTY_QUERY,
                     StorageDeviceSeekPenaltyProperty,
-                    VOLUME_DISK_EXTENTS,
                 },
                 SystemServices::FILE_READ_ONLY_VOLUME,
                 WindowsProgramming::{
@@ -67,10 +65,13 @@ use {
     },
 };
 
+mod volume_utils;
+
 #[derive(Debug, Clone)]
 pub enum VolumeKind {
     Simple { disk_number: u32 },
-    Logical,
+    DynamicDisk,
+    StorageSpace,
     Unknown,
 }
 
@@ -329,67 +330,15 @@ impl Volume {
             read_only: self.volume_information().map(|info| info.read_only).ok(),
             ram,
             image: false,
-            lvm: matches!(volume_kind, VolumeKind::Logical),
+            lvm: matches!(volume_kind, VolumeKind::DynamicDisk)
+                || matches!(volume_kind, VolumeKind::StorageSpace),
             crypted: false,
             remote,
         })
     }
 
     fn volume_kind(&self) -> VolumeKind {
-        let handle = match unsafe {
-            CreateFileW(
-                self.name.as_pcwstr_no_trailing_backslash(),
-                0,
-                FILE_SHARE_READ | FILE_SHARE_WRITE,
-                None,
-                OPEN_EXISTING,
-                Default::default(),
-                None,
-            )
-        } {
-            Ok(handle) => handle,
-            Err(_) => return VolumeKind::Unknown,
-        };
-
-        let mut extents_buffer = VOLUME_DISK_EXTENTS {
-            NumberOfDiskExtents: 0,
-            Extents: [DISK_EXTENT {
-                DiskNumber: 0,
-                StartingOffset: 0,
-                ExtentLength: 0,
-            }],
-        };
-
-        let mut bytes_returned: u32 = 0;
-
-        let result = unsafe {
-            DeviceIoControl(
-                handle,
-                IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
-                None,
-                0,
-                Some(&mut extents_buffer as *mut _ as *mut _),
-                std::mem::size_of::<VOLUME_DISK_EXTENTS>() as u32,
-                Some(&mut bytes_returned),
-                None,
-            )
-        };
-
-        let _ = unsafe { CloseHandle(handle) };
-
-        match result {
-            Ok(_) => {
-                if extents_buffer.NumberOfDiskExtents == 1 {
-                    VolumeKind::Simple {
-                        disk_number: extents_buffer.Extents[0].DiskNumber,
-                    }
-                } else {
-                    VolumeKind::Logical
-                }
-            }
-            Err(error) if error.code() == ERROR_MORE_DATA.to_hresult() => VolumeKind::Logical,
-            Err(_) => VolumeKind::Unknown,
-        }
+        volume_kind_detect(&self.name)
     }
 
     fn volume_stats(&self) -> Result<Stats, StatsError> {
