@@ -44,10 +44,6 @@ use crate::windows::volume::{
 };
 
 pub fn volume_kind_detect(verbatim_path: &VolumeName) -> VolumeKind {
-    if let Ok(true) = is_volume_storage_space(verbatim_path) {
-        return VolumeKind::StorageSpace;
-    }
-
     let handle = match unsafe {
         CreateFileW(
             verbatim_path.as_pcwstr_no_trailing_backslash(),
@@ -90,15 +86,15 @@ pub fn volume_kind_detect(verbatim_path: &VolumeName) -> VolumeKind {
     let _ = unsafe { CloseHandle(handle) };
 
     match result {
-        Ok(_) => {
-            if extents_buffer.NumberOfDiskExtents == 1 {
-                VolumeKind::Simple {
-                    disk_number: extents_buffer.Extents[0].DiskNumber,
-                }
-            } else {
-                VolumeKind::DynamicDisk
+        Ok(_) => match extents_buffer.NumberOfDiskExtents {
+            1 if is_volume_storage_space(verbatim_path).is_ok_and(|x| x) => {
+                VolumeKind::StorageSpace
             }
-        }
+            1 => VolumeKind::Simple {
+                disk_number: extents_buffer.Extents[0].DiskNumber,
+            },
+            _ => VolumeKind::DynamicDisk,
+        },
         Err(error) if error.code() == ERROR_MORE_DATA.to_hresult() => VolumeKind::DynamicDisk,
         Err(_) => VolumeKind::Unknown,
     }

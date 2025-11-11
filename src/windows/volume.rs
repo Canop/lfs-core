@@ -338,7 +338,13 @@ impl Volume {
     }
 
     fn volume_kind(&self) -> VolumeKind {
-        volume_kind_detect(&self.name)
+        let kind = volume_kind_detect(&self.name);
+
+        // only pollute stderr in debug builds
+        #[cfg(debug_assertions)]
+        dbg!(&kind);
+
+        kind
     }
 
     fn volume_stats(&self) -> Result<Stats, StatsError> {
