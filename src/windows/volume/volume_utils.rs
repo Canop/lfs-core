@@ -1,40 +1,35 @@
-use std::collections::HashMap;
-
-use listdisk_rs::win32::storagepool::{
-    StoragePool,
-    StoragePoolToVolume,
-};
-
-use {
-    listdisk_rs::win32::volume_wmi::Volume,
-    wmi::WMIError,
-};
-
-use {
-    windows::Win32::{
-        Foundation::{
-            CloseHandle,
-            ERROR_MORE_DATA,
-        },
-        Storage::FileSystem::{
-            CreateFileW,
-            FILE_SHARE_READ,
-            FILE_SHARE_WRITE,
-            IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
-            OPEN_EXISTING,
-        },
-        System::{
-            IO::DeviceIoControl,
-            Ioctl::{
-                DISK_EXTENT,
-                VOLUME_DISK_EXTENTS,
-            },
-        },
+use std::{
+    os::windows::io::{
+        FromRawHandle,
+        OwnedHandle,
     },
-    wmi::{
-        FilterValue,
-        WMIConnection,
-        WMIResult,
+    ptr,
+};
+
+use windows::Win32::{
+    Foundation::{
+        ERROR_MORE_DATA,
+        HANDLE,
+    },
+    Storage::FileSystem::{
+        BusTypeSpaces,
+        CreateFileW,
+        FILE_SHARE_READ,
+        FILE_SHARE_WRITE,
+        IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
+        OPEN_EXISTING,
+    },
+    System::{
+        IO::DeviceIoControl,
+        Ioctl::{
+            DISK_EXTENT,
+            IOCTL_STORAGE_QUERY_PROPERTY,
+            PropertyStandardQuery,
+            STORAGE_DEVICE_DESCRIPTOR,
+            STORAGE_PROPERTY_QUERY,
+            StorageDeviceProperty,
+            VOLUME_DISK_EXTENTS,
+        },
     },
 };
 
@@ -58,6 +53,7 @@ pub fn volume_kind_detect(verbatim_path: &VolumeName) -> VolumeKind {
         Ok(handle) => handle,
         Err(_) => return VolumeKind::Unknown,
     };
+    let _handle = unsafe { OwnedHandle::from_raw_handle(handle.0) };
 
     let mut extents_buffer = VOLUME_DISK_EXTENTS {
         NumberOfDiskExtents: 0,
@@ -83,13 +79,9 @@ pub fn volume_kind_detect(verbatim_path: &VolumeName) -> VolumeKind {
         )
     };
 
-    let _ = unsafe { CloseHandle(handle) };
-
     match result {
         Ok(_) => match extents_buffer.NumberOfDiskExtents {
-            1 if is_volume_storage_space(verbatim_path).is_ok_and(|x| x) => {
-                VolumeKind::StorageSpace
-            }
+            1 if is_volume_storage_space(handle) => VolumeKind::StorageSpace,
             1 => VolumeKind::Simple {
                 disk_number: extents_buffer.Extents[0].DiskNumber,
             },
@@ -100,18 +92,27 @@ pub fn volume_kind_detect(verbatim_path: &VolumeName) -> VolumeKind {
     }
 }
 
-fn is_volume_storage_space(verbatim_path: &VolumeName) -> WMIResult<bool> {
-    let wmi = WMIConnection::with_namespace_path(r#"ROOT\Microsoft\Windows\Storage"#)?;
-    let map = HashMap::from([(
-        "Path".into(),
-        FilterValue::String(verbatim_path.to_string()),
-    )]);
+fn is_volume_storage_space(handle: HANDLE) -> bool {
+    let query = STORAGE_PROPERTY_QUERY {
+        PropertyId: StorageDeviceProperty,
+        QueryType: PropertyStandardQuery,
+        AdditionalParameters: [0; 1],
+    };
 
-    let volume = wmi
-        .filtered_query::<Volume>(&map)?
-        .pop()
-        .ok_or(WMIError::ResultEmpty)?;
+    let mut descriptor = STORAGE_DEVICE_DESCRIPTOR::default();
 
-    let storage_pool = wmi.associators::<StoragePool, StoragePoolToVolume>(&volume.obj_path)?;
-    Ok(!storage_pool.is_empty())
+    let result = unsafe {
+        DeviceIoControl(
+            handle,
+            IOCTL_STORAGE_QUERY_PROPERTY,
+            Some(ptr::addr_of!(query).cast()),
+            std::mem::size_of::<STORAGE_PROPERTY_QUERY>() as u32,
+            Some(ptr::addr_of_mut!(descriptor).cast()),
+            std::mem::size_of::<STORAGE_DEVICE_DESCRIPTOR>() as u32,
+            None,
+            None,
+        )
+    };
+
+    result.is_ok_and(|_| descriptor.BusType == BusTypeSpaces)
 }

@@ -22,11 +22,6 @@ core-foundation-sys = "0.8"
 io-kit-sys = "0.4"
 
 [target.'cfg(windows)'.dependencies]
-wmi = "0.18"
-listdisk-rs = { version = "0.3.4", default-features = false, features = [
-    "storagepool",
-    "volume_wmi",
-] }
 windows = { version = "0.62", features = [
     "Win32_Storage_FileSystem",
     "Win32_System_SystemServices",
