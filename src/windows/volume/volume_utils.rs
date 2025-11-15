@@ -1,41 +1,41 @@
-use std::{
-    os::windows::io::{
-        FromRawHandle,
-        OwnedHandle,
+use {
+    crate::windows::volume::{
+        VolumeKind,
+        VolumeName,
     },
-    ptr,
-};
-
-use windows::Win32::{
-    Foundation::{
-        ERROR_MORE_DATA,
-        HANDLE,
+    std::{
+        self,
+        ptr,
     },
-    Storage::FileSystem::{
-        BusTypeSpaces,
-        CreateFileW,
-        FILE_SHARE_READ,
-        FILE_SHARE_WRITE,
-        IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
-        OPEN_EXISTING,
-    },
-    System::{
-        IO::DeviceIoControl,
-        Ioctl::{
-            DISK_EXTENT,
-            IOCTL_STORAGE_QUERY_PROPERTY,
-            PropertyStandardQuery,
-            STORAGE_DEVICE_DESCRIPTOR,
-            STORAGE_PROPERTY_QUERY,
-            StorageDeviceProperty,
-            VOLUME_DISK_EXTENTS,
+    windows::{
+        Win32::{
+            Foundation::{
+                ERROR_MORE_DATA,
+                HANDLE,
+            },
+            Storage::FileSystem::{
+                BusTypeSpaces,
+                CreateFileW,
+                FILE_SHARE_READ,
+                FILE_SHARE_WRITE,
+                IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
+                OPEN_EXISTING,
+            },
+            System::{
+                IO::DeviceIoControl,
+                Ioctl::{
+                    DISK_EXTENT,
+                    IOCTL_STORAGE_QUERY_PROPERTY,
+                    PropertyStandardQuery,
+                    STORAGE_DEVICE_DESCRIPTOR,
+                    STORAGE_PROPERTY_QUERY,
+                    StorageDeviceProperty,
+                    VOLUME_DISK_EXTENTS,
+                },
+            },
         },
+        core::Owned,
     },
-};
-
-use crate::windows::volume::{
-    VolumeKind,
-    VolumeName,
 };
 
 pub fn volume_kind_detect(verbatim_path: &VolumeName) -> VolumeKind {
@@ -53,7 +53,7 @@ pub fn volume_kind_detect(verbatim_path: &VolumeName) -> VolumeKind {
         Ok(handle) => handle,
         Err(_) => return VolumeKind::Unknown,
     };
-    let _handle = unsafe { OwnedHandle::from_raw_handle(handle.0) };
+    let handle = unsafe { Owned::new(handle) };
 
     let mut extents_buffer = VOLUME_DISK_EXTENTS {
         NumberOfDiskExtents: 0,
@@ -68,7 +68,7 @@ pub fn volume_kind_detect(verbatim_path: &VolumeName) -> VolumeKind {
 
     let result = unsafe {
         DeviceIoControl(
-            handle,
+            *handle,
             IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
             None,
             0,
@@ -81,7 +81,7 @@ pub fn volume_kind_detect(verbatim_path: &VolumeName) -> VolumeKind {
 
     match result {
         Ok(_) => match extents_buffer.NumberOfDiskExtents {
-            1 if is_volume_storage_space(handle) => VolumeKind::StorageSpace,
+            1 if is_volume_storage_space(*handle) => VolumeKind::StorageSpace,
             1 => VolumeKind::Simple {
                 disk_number: extents_buffer.Extents[0].DiskNumber,
             },
