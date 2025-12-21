@@ -37,6 +37,11 @@ impl Mount {
     pub fn is_unreachable(&self) -> bool {
         matches!(self.stats, Err(StatsError::Unreachable))
     }
+    /// Tell whether the reason we have no stats is because
+    /// there was a timeout trying to fetch them
+    pub fn is_timeout(&self) -> bool {
+        matches!(self.stats, Err(StatsError::Timeout))
+    }
 
     #[cfg(unix)]
     pub fn is_remote(&self) -> bool {

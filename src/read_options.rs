@@ -1,4 +1,7 @@
-use std::str::FromStr;
+use std::{
+    str::FromStr,
+    time::Duration,
+};
 
 #[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
@@ -14,12 +17,14 @@ pub enum Strategy {
 pub struct ReadOptions {
     pub(crate) remote_stats: bool,
     pub(crate) strategy: Option<Strategy>,
+    pub(crate) stats_timeout: Duration,
 }
 impl Default for ReadOptions {
     fn default() -> Self {
         Self {
             remote_stats: true,
             strategy: None,
+            stats_timeout: Duration::from_millis(100),
         }
     }
 }
@@ -36,6 +41,13 @@ impl ReadOptions {
         v: Strategy,
     ) -> Self {
         self.strategy = Some(v);
+        self
+    }
+    pub fn stats_timeout(
+        mut self,
+        v: Duration,
+    ) -> Self {
+        self.stats_timeout = v;
         self
     }
 }

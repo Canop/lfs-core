@@ -14,6 +14,9 @@ pub enum StatsError {
     #[snafu(display("Could not stat mount point"))]
     Unreachable,
 
+    #[snafu(display("Timeout on stating mount point"))]
+    Timeout,
+
     #[snafu(display("Unconsistent stats"))]
     Unconsistent,
 

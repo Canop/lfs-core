@@ -10,6 +10,9 @@ use {
         mem,
         os::unix::ffi::OsStrExt,
         path::Path,
+        sync::mpsc,
+        thread,
+        time::Duration,
     },
 };
 
@@ -54,8 +57,12 @@ pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
             let uuid = get_label(&info.fs, by_uuid.as_deref());
             let part_uuid = get_label(&info.fs, by_partuuid.as_deref());
             let disk = top_bd.map(|bd| new_disk(bd.name.clone()));
-            let stats = if !options.remote_stats && info.is_remote() {
-                Err(StatsError::Excluded)
+            let stats = if info.is_remote() {
+                if options.remote_stats {
+                    read_stats_with_timeout(&info.mount_point, options.stats_timeout)
+                } else {
+                    Err(StatsError::Excluded)
+                }
             } else {
                 read_stats(&info.mount_point)
             };
@@ -71,6 +78,18 @@ pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
         .collect()
 }
 
+pub fn read_stats_with_timeout(
+    mount_point: &Path,
+    timeout: Duration,
+) -> Result<Stats, StatsError> {
+    let mount_point = mount_point.to_path_buf();
+    let (tx, rx) = mpsc::channel();
+    thread::spawn(move || {
+        let stats = read_stats(&mount_point);
+        let _ = tx.send(stats);
+    });
+    rx.recv_timeout(timeout).map_err(|_| StatsError::Timeout)?
+}
 pub fn read_stats(mount_point: &Path) -> Result<Stats, StatsError> {
     let c_mount_point = CString::new(mount_point.as_os_str().as_bytes()).unwrap();
     unsafe {
