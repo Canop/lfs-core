@@ -59,7 +59,11 @@ pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
             let disk = top_bd.map(|bd| new_disk(bd.name.clone()));
             let stats = if info.is_remote() {
                 if options.remote_stats {
-                    read_stats_with_timeout(&info.mount_point, options.stats_timeout)
+                    if let Some(timeout) = options.stats_timeout {
+                        read_stats_with_timeout(&info.mount_point, timeout)
+                    } else {
+                        read_stats(&info.mount_point)
+                    }
                 } else {
                     Err(StatsError::Excluded)
                 }

@@ -17,14 +17,14 @@ pub enum Strategy {
 pub struct ReadOptions {
     pub(crate) remote_stats: bool,
     pub(crate) strategy: Option<Strategy>,
-    pub(crate) stats_timeout: Duration,
+    pub(crate) stats_timeout: Option<Duration>,
 }
 impl Default for ReadOptions {
     fn default() -> Self {
         Self {
             remote_stats: true,
             strategy: None,
-            stats_timeout: Duration::from_millis(100),
+            stats_timeout: Some(Duration::from_millis(100)),
         }
     }
 }
@@ -43,9 +43,11 @@ impl ReadOptions {
         self.strategy = Some(v);
         self
     }
+    /// Set the timeout for reading stats on remote filesystems
+    /// (unix only), which by default is 100ms.
     pub fn stats_timeout(
         mut self,
-        v: Duration,
+        v: Option<Duration>,
     ) -> Self {
         self.stats_timeout = v;
         self
