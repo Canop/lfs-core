@@ -57,16 +57,10 @@ pub fn read_mounts(options: &ReadOptions) -> Result<Vec<Mount>, Error> {
             let uuid = get_label(&info.fs, by_uuid.as_deref());
             let part_uuid = get_label(&info.fs, by_partuuid.as_deref());
             let disk = top_bd.map(|bd| new_disk(bd.name.clone()));
-            let stats = if info.is_remote() {
-                if options.remote_stats {
-                    if let Some(timeout) = options.stats_timeout {
-                        read_stats_with_timeout(&info.mount_point, timeout)
-                    } else {
-                        read_stats(&info.mount_point)
-                    }
-                } else {
-                    Err(StatsError::Excluded)
-                }
+            let stats = if info.is_remote() && !options.remote_stats {
+                Err(StatsError::Excluded)
+            } else if let Some(timeout) = options.stats_timeout {
+                read_stats_with_timeout(&info.mount_point, timeout)
             } else {
                 read_stats(&info.mount_point)
             };

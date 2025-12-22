@@ -24,7 +24,7 @@ impl Default for ReadOptions {
         Self {
             remote_stats: true,
             strategy: None,
-            stats_timeout: Some(Duration::from_millis(100)),
+            stats_timeout: Some(Duration::from_millis(50)),
         }
     }
 }
