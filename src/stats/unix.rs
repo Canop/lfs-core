@@ -35,7 +35,7 @@ impl Stats {
         if self.blocks == 0 {
             0.0
         } else {
-            (self.blocks - self.bfree) as f64 / self.blocks as f64
+            (self.blocks - self.bavail) as f64 / self.blocks as f64
         }
     }
 }
