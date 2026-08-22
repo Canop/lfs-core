@@ -1,6 +1,6 @@
 [package]
 name = "lfs-core"
-version = "0.19.4"
+version = "0.20.0"
 authors = ["dystroy <denys.seguret@gmail.com>"]
 edition = "2021"
 keywords = ["linux", "macos", "filesystem", "fs"]
@@ -14,12 +14,12 @@ readme = "README.md"
 [dependencies]
 lazy-regex = "3.4"
 libc = "0.2"
-snafu = "0.7"
+snafu = "0.9"
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
-core-foundation = "0.9"
+core-foundation = "0.10"
 core-foundation-sys = "0.8"
-io-kit-sys = "0.4"
+io-kit-sys = "0.5"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", features = [
