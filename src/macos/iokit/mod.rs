@@ -161,10 +161,3 @@ fn props_to_device(
         content,
     })
 }
-
-#[test]
-fn test_smb() {
-    let mountinfos = get_all_dev_mount_infos();
-    println!("MountInfos: {:#?}", mountinfos);
-    todo!();
-}

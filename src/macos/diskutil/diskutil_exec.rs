@@ -11,7 +11,7 @@ pub fn du_lines(args: &[&str]) -> Result<Vec<String>, Error> {
         .args(args)
         .output()
         .with_context(|_| CantExecuteSnafu { exe })?;
-    let output = str::from_utf8(&output.stdout).map_err(|_| Error::UnexpectedFormat)?;
+    let output = std::str::from_utf8(&output.stdout).map_err(|_| Error::UnexpectedFormat)?;
     let lines = output.lines().map(|s| s.to_string()).collect();
     Ok(lines)
 }
