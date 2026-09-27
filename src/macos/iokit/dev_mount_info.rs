@@ -70,7 +70,7 @@ impl DevMountInfo {
                         bfree: stat.f_bfree,
                         bavail: stat.f_bavail,
                         bused: stat.f_blocks - stat.f_bavail,
-                        inodes: None,
+                        inodes: Inodes::new(stat.f_files, stat.f_ffree, stat.f_ffree),
                     };
                     let fs_type = match fs_type {
                         "apfs" => "APFS",
