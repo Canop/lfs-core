@@ -98,8 +98,9 @@ pub fn mounted_devices() -> Result<Vec<Device>, Error> {
             media_service = IOIteratorNext(iterator);
             media_service != 0
         } {
-            let dev = service_to_device(media_service)?;
-            devs.push(dev);
+            if let Ok(dev) = service_to_device(media_service) {
+                devs.push(dev);
+            }
             IOObjectRelease(media_service);
         }
         IOObjectRelease(iterator);
@@ -107,34 +108,41 @@ pub fn mounted_devices() -> Result<Vec<Device>, Error> {
     //dbg!(dmis);
     Ok(devs)
 }
+
 unsafe fn service_to_device(
     media_service: io_object_t, // service from the IOMedia layer
 ) -> Result<Device, Error> {
+    let media_props = Properties::new(media_service)?;
+    let bs_props = block_storage_properties(media_service);
+    props_to_device(media_props, bs_props)
+}
+
+/// Find the properties of the "physical" layer above an IOMedia service.
+/// Virtual devices (eg RAID sets) have none.
+unsafe fn block_storage_properties(media_service: io_object_t) -> Option<Properties> {
     let mut current_service = media_service;
-    let mut parent: io_object_t = 0;
     loop {
+        let mut parent: io_object_t = 0;
         let result = IORegistryEntryGetParentEntry(current_service, kIOServicePlane, &mut parent);
-        if result != KERN_SUCCESS {
-            break;
-        }
-        let props = Properties::new(parent)?;
-        if props.has("Device Characteristics") || props.has("Solid State") {
-            // this is the "physical" layer
-            let media_props = Properties::new(media_service)?;
-            let device = props_to_device(media_props, props)?;
-            IOObjectRelease(current_service);
-            return Ok(device);
-        }
         if current_service != media_service {
             IOObjectRelease(current_service);
         }
+        if result != KERN_SUCCESS {
+            return None;
+        }
+        if let Ok(props) = Properties::new(parent) {
+            if props.has("Device Characteristics") || props.has("Solid State") {
+                IOObjectRelease(parent);
+                return Some(props);
+            }
+        }
         current_service = parent;
     }
-    Err(Error::DeviceLayerNotFound)
 }
+
 fn props_to_device(
     media_props: Properties,
-    bs_props: Properties, // block storage layer
+    bs_props: Option<Properties>, // block storage layer
 ) -> Result<Device, Error> {
     let id = media_props.get_mandatory_string("BSD Name")?;
     let node = format!("/dev/{id}");
@@ -142,7 +150,9 @@ fn props_to_device(
     let crypted = media_props.get_bool("CoreStorage Encrypted"); // TODO check this
     let read_only = media_props.get_bool("Writable").map(|b| !b);
 
-    let medium_type = bs_props.get_sub_string("Device Characteristics", "Medium Type");
+    let medium_type = bs_props
+        .as_ref()
+        .and_then(|p| p.get_sub_string("Device Characteristics", "Medium Type"));
     let rotational = medium_type.map(|v| !v.contains("Solid"));
 
     let uuid = media_props.get_string("UUID");

@@ -41,9 +41,6 @@ pub enum Error {
     #[snafu(display("Failed to read {key:?}"))]
     MissingValue { key: &'static str },
 
-    #[snafu(display("Device layer not found"))]
-    DeviceLayerNotFound,
-
     #[cfg(windows)]
     #[snafu(display("Windows API call failed: {api}"))]
     WindowsApiError {
